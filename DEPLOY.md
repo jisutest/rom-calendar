@@ -1,6 +1,6 @@
 # 롬캘린더 Vercel 배포 방법
 
-구성: `index.html`(화면) + `api/events.js`(일정 저장 API) + Upstash Redis(저장소, Vercel에서 무료로 연결).
+구성: `index.html`(화면) + API(`api/events.js` 일정, `api/fixed.js` 고정비, `api/expenses.js` 변동 지출) + Upstash Redis(저장소, Vercel에서 무료로 연결).
 가족 비밀번호는 서버 환경 변수 `FAMILY_PASSWORD`에만 있어서 화면 코드에는 들어가지 않아요.
 
 PowerShell에서 `npx`가 막히면 `npx.cmd`로 실행하세요.

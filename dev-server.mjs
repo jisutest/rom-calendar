@@ -5,11 +5,16 @@ import http from "node:http";
 import { readFile } from "node:fs/promises";
 
 process.env.FAMILY_PASSWORD ||= "romi";
-const { default: events } = await import("./api/events.js");
+const routes = {
+  "/api/events": (await import("./api/events.js")).default,
+  "/api/fixed": (await import("./api/fixed.js")).default,
+  "/api/expenses": (await import("./api/expenses.js")).default,
+};
 const PORT = Number(process.env.PORT) || 5178;
 
 http.createServer(async (req, res) => {
-  if (req.url.startsWith("/api/events")) return events(req, res);
+  const path = req.url.split("?")[0];
+  if (routes[path]) return routes[path](req, res);
   if (req.url === "/" || req.url.startsWith("/?") || req.url === "/index.html") {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     return res.end(await readFile(new URL("./index.html", import.meta.url)));
