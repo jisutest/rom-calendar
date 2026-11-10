@@ -19,5 +19,12 @@ http.createServer(async (req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     return res.end(await readFile(new URL("./index.html", import.meta.url)));
   }
+  const font = path.match(/^\/fonts\/([\w.-]+\.(ttf|woff2?))$/);
+  if (font) {
+    try {
+      res.setHeader("Content-Type", { ttf: "font/ttf", woff: "font/woff", woff2: "font/woff2" }[font[2]]);
+      return res.end(await readFile(new URL("./fonts/" + font[1], import.meta.url)));
+    } catch {}
+  }
   res.statusCode = 404; res.end("not found");
 }).listen(PORT, () => console.log(`롬캘린더 → http://localhost:${PORT}  (비밀번호: ${process.env.FAMILY_PASSWORD})`));

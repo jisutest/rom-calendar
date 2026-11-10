@@ -8,8 +8,12 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='34' r='26' fill='%23ffe0cc'/%3E%3Ccircle cx='23' cy='31' r='3' fill='%234a2236'/%3E%3Ccircle cx='41' cy='31' r='3' fill='%234a2236'/%3E%3Cpath d='M26 41q6 5 12 0' stroke='%234a2236' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Cpath d='M38 10l10-6v14zM58 10l-10-6v14z' fill='%23ff5c97'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link rel="preload" href="/fonts/OngleipYoontang.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="/fonts/Cafe24Ssurround.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+@font-face { font-family: "Ongleip Yoontang"; src: url("/fonts/OngleipYoontang.ttf") format("truetype"); font-display: swap; size-adjust: 108%; }
+@font-face { font-family: "Cafe24 Ssurround"; src: url("/fonts/Cafe24Ssurround.woff2") format("woff2"), url("/fonts/Cafe24Ssurround.woff") format("woff"); font-display: swap; }
 /* Layout: 핑크 하트 헤더 → 두 달 달력이 나란히 + 오른쪽에 고른 날의 일정 카드 (좁으면 차례로 쌓임). */
 :root {
   --bg: #fff3f7;               /* 연한 벚꽃 바탕 */
@@ -39,9 +43,10 @@
   --var-ink: #5a48d6;
   --shadow: 0 18px 40px -12px rgba(255, 92, 151, .35);
   --card: 0 2px 0 rgba(255, 92, 151, .08), 0 12px 28px -18px rgba(255, 92, 151, .45);
-  --f-display: "Jua", "Noto Sans KR", system-ui, sans-serif;
-  --f-cute: "Gowun Dodum", "Noto Sans KR", system-ui, sans-serif;
-  --f-body: "Noto Sans KR", system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --f-title: "Cafe24 Ssurround", "Ongleip Yoontang", "Noto Sans KR", system-ui, sans-serif;
+  --f-display: "Ongleip Yoontang", "Noto Sans KR", system-ui, sans-serif;
+  --f-cute: "Ongleip Yoontang", "Noto Sans KR", system-ui, sans-serif;
+  --f-body: "Ongleip Yoontang", "Noto Sans KR", system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -92,7 +97,7 @@ header.top {
   box-shadow: var(--shadow);
 }
 .top-row { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; padding-block: 16px 10px; }
-.brand { font-family: var(--f-display); font-weight: 400; font-size: 32px; line-height: 1; display: flex; align-items: center; gap: 10px; margin: 0; text-shadow: 0 2px 0 rgba(180, 30, 90, .25); }
+.brand { font-family: var(--f-title); font-weight: 400; font-size: 32px; line-height: 1; display: flex; align-items: center; gap: 10px; margin: 0; text-shadow: 0 2px 0 rgba(180, 30, 90, .25); }
 .face { width: 42px; height: 42px; border-radius: 50%; background: #ffe0cc; position: relative; flex: none; box-shadow: 0 3px 0 rgba(180, 30, 90, .25), inset 0 -3px 0 rgba(0,0,0,.06); }
 .face .eye { position: absolute; top: 17px; width: 5px; height: 6px; border-radius: 50%; background: #4a2236; }
 .face .eye.l { left: 12px; } .face .eye.r { right: 12px; }
