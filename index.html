@@ -4,8 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ff8db8">
-<title>롬캘린더</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='34' r='26' fill='%23ffe0cc'/%3E%3Ccircle cx='23' cy='31' r='3' fill='%234a2236'/%3E%3Ccircle cx='41' cy='31' r='3' fill='%234a2236'/%3E%3Cpath d='M26 41q6 5 12 0' stroke='%234a2236' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Cpath d='M38 10l10-6v14zM58 10l-10-6v14z' fill='%23ff5c97'/%3E%3C/svg%3E">
+<title>롬데이즈</title>
+<link rel="icon" type="image/png" href="/img/favicon.png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="롬데이즈">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
@@ -98,16 +100,7 @@ header.top {
 }
 .top-row { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; padding-block: 16px 10px; }
 .brand { font-family: var(--f-title); font-weight: 400; font-size: 32px; line-height: 1; display: flex; align-items: center; gap: 10px; margin: 0; text-shadow: 0 2px 0 rgba(180, 30, 90, .25); }
-.face { width: 42px; height: 42px; border-radius: 50%; background: #ffe0cc; position: relative; flex: none; box-shadow: 0 3px 0 rgba(180, 30, 90, .25), inset 0 -3px 0 rgba(0,0,0,.06); }
-.face .eye { position: absolute; top: 17px; width: 5px; height: 6px; border-radius: 50%; background: #4a2236; }
-.face .eye.l { left: 12px; } .face .eye.r { right: 12px; }
-.face .cheek { position: absolute; top: 23px; width: 8px; height: 5px; border-radius: 50%; background: #ff8fb4; }
-.face .cheek.l { left: 6px; } .face .cheek.r { right: 6px; }
-.face .mouth { position: absolute; bottom: 9px; left: 50%; width: 10px; height: 5px; margin-left: -5px; border: 2.5px solid #4a2236; border-top: 0; border-radius: 0 0 10px 10px; }
-.face .bow { position: absolute; top: -6px; right: -4px; width: 22px; height: 14px; }
-.face .bow::before, .face .bow::after { content: ""; position: absolute; top: 0; width: 11px; height: 12px; background: var(--pink); border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; box-shadow: inset 0 -2px 0 rgba(0,0,0,.1); }
-.face .bow::before { left: 0; transform: rotate(-25deg); } .face .bow::after { right: 0; transform: rotate(25deg); }
-.face .bow i { position: absolute; left: 8px; top: 3px; width: 6px; height: 6px; border-radius: 50%; background: #fff; z-index: 1; border: 2px solid var(--pink); }
+.face { width: 52px; height: 52px; border-radius: 50%; background: #fff url("/img/romi-face.png") center / cover no-repeat; border: 3px solid #fff; position: relative; flex: none; box-shadow: 0 3px 0 rgba(180, 30, 90, .25); }
 .brand .sub { font-family: var(--f-cute); font-size: 13px; font-weight: 700; background: #fff; color: var(--pink); padding: 4px 11px; border-radius: 999px; text-shadow: none; transform: rotate(-3deg); box-shadow: 0 2px 0 rgba(180, 30, 90, .2); }
 
 .monthnav { display: flex; align-items: center; gap: 8px; margin-left: auto; }
@@ -365,8 +358,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
   <div class="wrap">
     <div class="top-row">
       <h1 class="brand">
-        <span class="face" aria-hidden="true"><span class="bow"><i></i></span><span class="eye l"></span><span class="eye r"></span><span class="cheek l"></span><span class="cheek r"></span><span class="mouth"></span></span>
-        롬캘린더
+        <span class="face" role="img" aria-label="로미 얼굴"></span>
+        롬데이즈
         <span class="sub">로미네 가족</span>
       </h1>
       <div class="monthnav">
