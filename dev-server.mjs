@@ -9,6 +9,7 @@ const routes = {
   "/api/events": (await import("./api/events.js")).default,
   "/api/fixed": (await import("./api/fixed.js")).default,
   "/api/expenses": (await import("./api/expenses.js")).default,
+  "/api/assets": (await import("./api/assets.js")).default,
 };
 const PORT = Number(process.env.PORT) || 5178;
 

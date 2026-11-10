@@ -1,6 +1,6 @@
 // 저장소: Vercel에 연결한 Upstash Redis(REST)를 쓰고,
 // 환경 변수가 없으면(로컬 개발) 메모리에 저장한다.
-// 컬렉션마다 Redis 해시 하나 (rom:events, rom:fixed, rom:expenses).
+// 컬렉션마다 Redis 해시 하나 (rom:events, rom:fixed, rom:expenses, rom:assets).
 import { timingSafeEqual, createHash, randomUUID } from "node:crypto";
 
 const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -24,7 +24,7 @@ function memRedis([op, key, ...args]) {
   const h = mem.hashes.get(key);
   switch (op) {
     case "HGETALL": return [...h].flat();
-    case "HSET": h.set(args[0], args[1]); return 1;
+    case "HSET": for (let i = 0; i < args.length; i += 2) h.set(args[i], args[i + 1]); return args.length / 2;
     case "HEXISTS": return h.has(args[0]) ? 1 : 0;
     case "HDEL": return h.delete(args[0]) ? 1 : 0;
     case "HLEN": return h.size;
@@ -48,6 +48,7 @@ function makeStore(key) {
     exists: async id => (await redis(["HEXISTS", key, id])) === 1,
     count: async () => Number(await redis(["HLEN", key])) || 0,
     put: (id, v) => redis(["HSET", key, id, JSON.stringify(v)]),
+    putMany: pairs => redis(["HSET", key, ...pairs.flatMap(([id, v]) => [id, JSON.stringify(v)])]),
     del: id => redis(["HDEL", key, id]),
   };
 }
@@ -82,15 +83,17 @@ export function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+const MAX_BODY = 1024 * 1024; // 여러 건 한꺼번에 올리기 때문에 1MB까지
 async function readBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
   if (typeof req.body === "string") { try { return JSON.parse(req.body); } catch { return null; } }
   let raw = "";
-  for await (const chunk of req) { raw += chunk; if (raw.length > 64 * 1024) return null; }
+  for await (const chunk of req) { raw += chunk; if (raw.length > MAX_BODY) return null; }
   try { return JSON.parse(raw || "null"); } catch { return null; }
 }
 
-// GET 목록 / POST 추가 / PUT ?id= 고치기 / DELETE ?id= 지우기 — 모두 가족 비밀번호 필요
+// GET 목록 / POST 추가 (또는 {items:[...]}로 여러 건) / PUT ?id= 고치기 / DELETE ?id= 지우기 — 모두 가족 비밀번호 필요
+const BULK_MAX = 1000;
 export function makeHandler({ key, clean, max, listName }) {
   const store = makeStore(key);
   return async function handler(req, res) {
@@ -99,7 +102,17 @@ export function makeHandler({ key, clean, max, listName }) {
       const id = new URL(req.url, "http://x").searchParams.get("id");
       if (req.method === "GET") return send(res, 200, { [listName]: await store.all() });
       if (req.method === "POST") {
-        const v = clean(await readBody(req));
+        const body = await readBody(req);
+        if (body && Array.isArray(body.items)) {
+          if (body.items.length > BULK_MAX) return send(res, 413, { error: "too_big", message: `한 번에 ${BULK_MAX}건까지 올릴 수 있어요.` });
+          const ok = body.items.map(clean).filter(Boolean);
+          if (!ok.length) return send(res, 400, { error: "invalid", message: "올릴 수 있는 줄이 없어요." });
+          if ((await store.count()) + ok.length > max) return send(res, 507, { error: "full", message: "저장 공간이 가득 찼어요. 오래된 항목을 지워 주세요." });
+          const now = Date.now();
+          await store.putMany(ok.map(v => [randomUUID(), { ...v, createdAt: now, updatedAt: now }]));
+          return send(res, 201, { added: ok.length, skipped: body.items.length - ok.length });
+        }
+        const v = clean(body);
         if (!v) return send(res, 400, { error: "invalid", message: "입력한 내용이 올바르지 않아요." });
         if ((await store.count()) >= max) return send(res, 507, { error: "full", message: "저장 공간이 가득 찼어요. 오래된 항목을 지워 주세요." });
         const now = Date.now(), newId = randomUUID();
@@ -175,4 +188,36 @@ export function cleanExpense(b) {
   if (!DATE.test(date) || !amount) return null;
   const who = Array.isArray(b.who) ? WHO.filter(w => b.who.includes(w)) : [];
   return { date, amount, category: cat(b.category), who, memo: String(b.memo || "").trim().slice(0, 100) };
+}
+
+// 자산: 지금 가진 돈과 빚. 적금은 매달 넣는 돈·시작 달·기간으로 잔액을 자동 계산한다.
+const ASSET_KINDS = ["cash", "saving", "invest", "realestate", "pension", "etc", "debt"];
+const OWNERS = ["dad", "mom", "romi", "family"];
+export function cleanAsset(b) {
+  if (!b || typeof b !== "object") return null;
+  const name = String(b.name || "").trim().slice(0, 40);
+  const kind = ASSET_KINDS.includes(b.kind) ? b.kind : "etc";
+  const owner = OWNERS.includes(b.owner) ? b.owner : "family";
+  const amount = Math.round(Number(b.amount)) || 0;
+  if (!name || amount < 0 || amount > 1e12) return null;
+  const out = { name, kind, owner, amount, memo: String(b.memo || "").trim().slice(0, 200) };
+  if (kind === "saving") {
+    out.monthly = money(b.monthly);
+    out.start = MONTH.test(String(b.start || "")) ? String(b.start) : "";
+    out.months = Math.min(600, Math.max(0, Math.round(Number(b.months)) || 0));
+    const rate = Number(b.rate);
+    out.rate = Number.isFinite(rate) && rate >= 0 && rate <= 30 ? Math.round(rate * 100) / 100 : 0;
+    out.auto = !!(b.auto && out.monthly && out.start);
+    if (!out.auto && !amount && !out.monthly) return null;
+  } else if (!amount) return null;
+  // 달마다 마지막으로 적은 금액 (순자산 추이용, 최근 120개월)
+  const hist = {};
+  if (b.history && typeof b.history === "object") {
+    for (const k of Object.keys(b.history).filter(k => MONTH.test(k)).sort().slice(-120)) {
+      const v = Math.round(Number(b.history[k]));
+      if (Number.isFinite(v) && v >= 0 && v <= 1e12) hist[k] = v;
+    }
+  }
+  out.history = hist;
+  return out;
 }
