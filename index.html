@@ -1954,6 +1954,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         state.events = (events || []).map(normalize).filter(e => /^\d{4}-\d{2}-\d{2}$/.test(e.start));
         state.loaded = true; state.canWrite = true;
         const t = new Date();
+        if (state.storage === "missing" || state.storage === "error") { setStatus("⚠ 저장소(DB)가 연결되지 않았어요. 지금은 저장이 안 돼요. Vercel의 Storage에서 Upstash를 rom-calendar에 연결하고 다시 배포해 주세요.", true); renderAll(); return; }
         setStatus(`가족 일정 ${state.events.length}개 · 고정비 ${state.fixed.length}개 · 지출 ${state.expenses.length}건 · ${pad(t.getHours())}:${pad(t.getMinutes())} 기준 · 가족이 바꾼 내용은 잠시 뒤 자동으로 보여요`);
         renderAll();
       } catch (e) {
@@ -2002,6 +2003,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     setTimeout(() => input.focus(), 30);
   }
 
+  // 저장소 상태 (missing/error면 상태줄에 경고)
+  fetch("/api/health").then(r => r.json()).then(j => { state.storage = j.storage; if (j.storage === "missing" || j.storage === "error") refresh(); }).catch(() => {});
   if (familyKey) { setStatus("가족 일정을 불러오는 중…"); refresh(); } else { state.loaded = true; renderAll(); showLogin(); }
   // 다른 가족이 바꾼 내용을 가져오기: 화면이 보일 때 30초마다, 그리고 다시 돌아왔을 때
   setInterval(() => { if (document.visibilityState === "visible") refresh(); }, 30000);

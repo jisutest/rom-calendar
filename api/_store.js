@@ -1,14 +1,39 @@
-// 저장소: Vercel에 연결한 Upstash Redis(REST)를 쓰고,
-// 환경 변수가 없으면(로컬 개발) 메모리에 저장한다.
+// 저장소: Vercel에 연결한 Upstash Redis(REST)를 쓴다.
+// 로컬 개발(환경 변수 없음)에서만 메모리에 저장하고, Vercel에서 저장소가 없으면 저장을 거부한다
+// (메모리 저장은 배포·재시작 때 사라지기 때문).
 // 컬렉션마다 Redis 해시 하나 (rom:events, rom:fixed, rom:expenses, rom:assets).
 import { timingSafeEqual, createHash, randomUUID } from "node:crypto";
 
-const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// Vercel이 연결할 때 붙이는 이름 앞부분(KV_, STORAGE_, UPSTASH_ 등)이 달라도 찾는다
+function findRedisEnv(env) {
+  const pairs = [["KV_REST_API_URL", "KV_REST_API_TOKEN"], ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"]];
+  for (const k of Object.keys(env).sort()) {
+    let m;
+    if ((m = k.match(/^(.*)_REST_API_URL$/))) pairs.push([k, `${m[1]}_REST_API_TOKEN`]);
+    if ((m = k.match(/^(.*)_REDIS_REST_URL$/))) pairs.push([k, `${m[1]}_REDIS_REST_TOKEN`]);
+  }
+  for (const [u, t] of pairs) if (env[u] && env[t]) return { url: env[u], token: env[t], name: u };
+  return null;
+}
+const FOUND = findRedisEnv(process.env);
+const URL_ = FOUND && FOUND.url;
+const TOKEN = FOUND && FOUND.token;
+const ON_VERCEL = !!process.env.VERCEL;
+
+// 비밀번호 없이 볼 수 있는 저장소 상태 (값은 빼고 이름만)
+export async function storageStatus() {
+  const names = Object.keys(process.env).filter(k => /KV|REDIS|UPSTASH|REST_API/i.test(k)).sort();
+  if (!URL_ || !TOKEN) return { storage: ON_VERCEL ? "missing" : "memory", envNames: names };
+  try { await redis(["PING"]); return { storage: "redis", via: FOUND.name, envNames: names }; }
+  catch (e) { return { storage: "error", via: FOUND.name, envNames: names, error: String(e.message || e).slice(0, 120) }; }
+}
 const mem = { hashes: new Map(), counters: new Map() };
 
 async function redis(cmd) {
-  if (!URL_ || !TOKEN) return memRedis(cmd);
+  if (!URL_ || !TOKEN) {
+    if (ON_VERCEL) { const e = new Error("no_db"); e.code = "no_db"; throw e; }
+    return memRedis(cmd);
+  }
   const r = await fetch(URL_, {
     method: "POST",
     headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
@@ -136,6 +161,7 @@ export function makeHandler({ key, clean, max, listName }) {
       return send(res, 405, { error: "method" });
     } catch (e) {
       console.error(e);
+      if (e.code === "no_db") return send(res, 503, { error: "no_db", message: "저장소(DB)가 연결되지 않아 저장할 수 없어요. Vercel의 Storage에서 Upstash를 이 프로젝트에 연결한 뒤 다시 배포해 주세요." });
       return send(res, 500, { error: "server", message: "서버에서 문제가 생겼어요. 잠시 후 다시 시도해 주세요." });
     }
   };
