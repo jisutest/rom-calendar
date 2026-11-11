@@ -386,6 +386,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
 .help-ex-t { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
 .help-ex pre { margin: 0; font-family: var(--f-body); font-size: 13px; white-space: pre-wrap; line-height: 1.6; }
 
+.fnote { flex-basis: 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--pink-soft); color: var(--fg); border-radius: 14px; padding: 7px 8px 7px 14px; font-size: 13px; font-weight: 700; }
+.fnote small { font-weight: 400; color: var(--muted); }
+.fnote button { margin-left: auto; height: 30px; padding: 0 14px; border-radius: 999px; border: 0; background: var(--pink); color: var(--pink-ink); font-weight: 700; font-size: 12.5px; }
+
 /* ---------- 자산 ---------- */
 .assets { padding-top: 22px; }
 .tile.hero.asset { background: var(--pink-soft); }
@@ -790,16 +794,30 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     who: Array.isArray(v.who) ? v.who : [], memo: String(v.memo || ""), createdAt: v.createdAt,
   });
 
+  // 상단 아빠·엄마·로미 필터: 모두 켜져 있으면 전부, 일부만 켜면 그 사람 몫만 (가족 공동은 빠짐)
+  const allShown = () => PEOPLE.every(p => state.show[p.id]);
+  const shownBy = who => allShown() || (who || []).some(w => state.show[w]);
+  const myFixed = () => state.fixed.filter(f => shownBy(f.who));
+  const myExp = () => state.expenses.filter(e => shownBy(e.who));
+  const myAssets = () => state.assets.filter(a => shownBy(a.owner === "family" ? [] : [a.owner]));
+  function filterNote() {
+    if (allShown()) return null;
+    const on = PEOPLE.filter(p => state.show[p.id]);
+    return el("div", { class: "fnote" },
+      el("span", {}, on.length ? `${on.map(p => p.name).join("·")} 몫만 보는 중` : "아무도 고르지 않았어요", el("small", {}, " · 가족 공동 항목은 빠져요")),
+      el("button", { type: "button", onclick: () => { PEOPLE.forEach(p => (state.show[p.id] = true)); save("rom.show", state.show); renderAll(); } }, "모두 보기"));
+  }
+
   // 그 달에 나가는 고정비 (결제일은 그 달의 마지막 날을 넘지 않게)
   function fixedIn(y, m) {
     const ym = ymOf(y, m);
-    return state.fixed.filter(f => activeIn(f, ym) && (f.cycle !== "yearly" || f.payMonth === m))
+    return myFixed().filter(f => activeIn(f, ym) && (f.cycle !== "yearly" || f.payMonth === m))
       .map(f => ({ f, date: `${ym}-${pad(Math.min(f.day, daysIn(y, m)))}` }));
   }
   function monthStats(y, m) {
     const ym = ymOf(y, m);
     const fx = fixedIn(y, m);
-    const exp = state.expenses.filter(e => e.date.startsWith(ym));
+    const exp = myExp().filter(e => e.date.startsWith(ym));
     const fixed = fx.reduce((s, x) => s + x.f.amount, 0);
     const variable = exp.reduce((s, e) => s + e.amount, 0);
     return { y, m, fx, exp, fixed, variable, total: fixed + variable, future: isFuture(y, m) };
@@ -807,7 +825,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
   function spendOn(k) {
     const [y, m] = k.split("-").map(Number);
     const fx = fixedIn(y, m).filter(x => x.date === k);
-    const ex = state.expenses.filter(e => e.date === k);
+    const ex = myExp().filter(e => e.date === k);
     return { fx, ex, total: fx.reduce((s, x) => s + x.f.amount, 0) + ex.reduce((s, e) => s + e.amount, 0) };
   }
   function niceMax(v) {
@@ -832,6 +850,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         el("button", { class: "pillbtn alt", onclick: () => openFixedEditor(null) }, "+ 고정비"),
         el("button", { class: "pillbtn", onclick: () => openExpenseEditor(null, state.sel) }, "+ 지출 기록")) : null);
 
+    if (state.canWrite) head.append(...[filterNote()].filter(Boolean));
     if (!state.canWrite) {
       box.replaceChildren(head, el("div", { class: "card locked" },
         "가족 비밀번호를 넣으면 가계부가 보여요.", el("br"),
@@ -845,8 +864,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     const ytdFixed = past.reduce((a, s) => a + s.fixed, 0);
     const avg = past.length ? ytd / past.length : 0;
     const nowYm = ymOf(NOW_Y, NOW_M);
-    const monthlyNow = state.fixed.filter(f => f.cycle === "monthly" && activeIn(f, nowYm));
-    const yearlyNow = state.fixed.filter(f => f.cycle === "yearly" && activeIn(f, nowYm));
+    const monthlyNow = myFixed().filter(f => f.cycle === "monthly" && activeIn(f, nowYm));
+    const yearlyNow = myFixed().filter(f => f.cycle === "yearly" && activeIn(f, nowYm));
     const monthlyFixed = monthlyNow.reduce((a, f) => a + f.amount, 0);
     const yearlyFixed = yearlyNow.reduce((a, f) => a + f.amount, 0);
     const share = ytd ? Math.round(ytdFixed / ytd * 100) : 0;
@@ -921,7 +940,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         el("div", { class: "months", "aria-hidden": "true" }, months.map(s => el("span", {
           class: [s.m === state.bmonth && "sel", y === NOW_Y && s.m === NOW_M && "now"].filter(Boolean).join(" "),
         }, `${s.m}월`))), tip),
-      !state.fixed.length && !state.expenses.length ? el("div", { class: "empty-chart" }, "오른쪽에서 관리비·통신비·보험료 같은 고정비부터 넣어 보세요. 막대가 바로 채워져요.") : null,
+      !myFixed().length && !myExp().length ? el("div", { class: "empty-chart" }, !allShown() ? "고른 사람 몫으로 넣은 고정비·지출이 아직 없어요." : "오른쪽에서 관리비·통신비·보험료 같은 고정비부터 넣어 보세요. 막대가 바로 채워져요.") : null,
       monthDetail(months[state.bmonth - 1]));
 
     box.replaceChildren(head, tiles, el("div", { class: "bud-grid" }, chartCard, fixedCard(monthlyFixed, yearlyFixed)));
@@ -962,7 +981,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
   // 고정비 한눈에 보기
   function fixedCard(monthlyFixed, yearlyFixed) {
     const nowYm = ymOf(NOW_Y, NOW_M);
-    const list = [...state.fixed].sort((a, b) =>
+    const list = myFixed().sort((a, b) =>
       (activeIn(b, nowYm) - activeIn(a, nowYm)) || (a.cycle === b.cycle ? 0 : a.cycle === "monthly" ? -1 : 1) ||
       (a.cycle === "yearly" ? a.payMonth - b.payMonth : 0) || a.day - b.day || b.amount - a.amount);
     return el("div", { class: "card" },
@@ -1582,8 +1601,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         el("button", { class: "helpbtn", "aria-label": "적금·저축은 어떻게 넣나요?", onclick: openAssetHelp }, "?"),
         el("button", { class: "pillbtn asset", onclick: () => openAssetEditor(null) }, "+ 자산 추가")) : null);
     if (!state.canWrite) { box.replaceChildren(head, el("div", { class: "card locked" }, "가족 비밀번호를 넣으면 자산이 보여요.")); return; }
+    head.append(...[filterNote()].filter(Boolean));
 
-    const list = state.assets;
+    const list = myAssets();
     const vals = list.map(a => ({ a, v: valueOf(a) || 0 }));
     const gross = vals.filter(x => x.a.kind !== "debt").reduce((s, x) => s + x.v, 0);
     const debt = vals.filter(x => x.a.kind === "debt").reduce((s, x) => s + x.v, 0);
@@ -1635,15 +1655,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
   // 순자산 추이: 달마다 적어 둔 금액(없으면 이전 값)으로 최근 12개월
   function trendBlock() {
     // 직접 적은 금액의 첫 달부터 (자동 적금만 있으면 적금 시작 달부터)
-    let firsts = state.assets.filter(a => !a.auto).map(a => Object.keys(a.history).sort()[0]).filter(Boolean);
-    if (!firsts.length) firsts = state.assets.filter(a => a.auto && a.start).map(a => a.start);
+    const mine = myAssets();
+    let firsts = mine.filter(a => !a.auto).map(a => Object.keys(a.history).sort()[0]).filter(Boolean);
+    if (!firsts.length) firsts = mine.filter(a => a.auto && a.start).map(a => a.start);
     if (!firsts.length) return null;
     const startYm = [firsts.sort()[0], ymAdd(NOW_YM, -11)].sort().pop();
     const n = monthsBetween(startYm, NOW_YM) + 1;
     const pts = Array.from({ length: n }, (_, i) => {
       const ym = ymAdd(startYm, i);
       let v = 0;
-      for (const a of state.assets) { const x = valueOf(a, ym); if (x != null) v += a.kind === "debt" ? -x : x; }
+      for (const a of mine) { const x = valueOf(a, ym); if (x != null) v += a.kind === "debt" ? -x : x; }
       return { ym, v };
     });
     if (pts.length < 2) return el("div", { class: "trend-note" }, "다음 달에도 금액을 고쳐 적으면, 순자산이 어떻게 늘었는지 여기 선으로 보여요.");
