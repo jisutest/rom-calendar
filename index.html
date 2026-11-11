@@ -185,6 +185,7 @@ main.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr
 
 /* ---------- 가계부 ---------- */
 .budget { padding-top: 14px; }
+.cal-title { padding-top: 22px; margin-bottom: 2px; }
 .bud-head { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .bud-head h2 { font-family: var(--f-display); font-weight: 400; font-size: 26px; margin: 0; }
 .yearnav { display: flex; align-items: center; gap: 2px; background: var(--surface); border-radius: 999px; padding: 3px; box-shadow: var(--card); }
@@ -242,7 +243,12 @@ main.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr
 .md-sum b { color: var(--fg); font-variant-numeric: tabular-nums; }
 .sublbl { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
 .catbars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
-.catbars li { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 12.5px; }
+.catbars button { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; gap: 8px; align-items: center; font: inherit; font-size: 12.5px; color: var(--fg); text-align: left; background: none; border: 0; border-radius: 10px; padding: 4px 6px; margin: -4px -6px; width: calc(100% + 12px); cursor: pointer; }
+.catbars button:hover { background: var(--surface-2); }
+.catbars button.on { background: var(--pink-soft); font-weight: 700; }
+.catbars button.on .bar2 { background: var(--pink); }
+.catbars.picking button:not(.on) { opacity: .55; }
+.cat-clear { margin-left: 6px; border: 0; background: var(--pink-soft); color: var(--pink); border-radius: 999px; padding: 1px 9px; font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; }
 .catbars .track { height: 10px; }
 .catbars .bar2 { height: 100%; border-radius: 0 4px 4px 0; background: var(--pink-2); min-width: 2px; }
 .catbars .amt { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
@@ -458,6 +464,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
   <div class="status" id="status" role="status">가족 일정을 불러오는 중…</div>
   <section class="budget" id="budget" aria-label="가계부"></section>
   <section class="budget assets" id="assets" aria-label="자산"></section>
+  <div class="bud-head cal-title"><h2>로미네 캘린더</h2></div>
   <main class="layout" id="layout">
     <section class="cal" id="cal0" aria-label="이번 달 달력"></section>
     <section class="cal" id="cal1" aria-label="다음 달 달력"></section>
@@ -578,6 +585,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     assets: [],         // 자산
     byear: now.getFullYear(),   // 가계부 연도
     bmonth: now.getMonth() + 1, // 가계부에서 고른 달
+    bcat: null,                 // 가계부 분류별에서 고른 분류
     loaded: false,
     canWrite: false,   // 가족 비밀번호로 들어오면 true
   };
@@ -953,10 +961,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     for (const e of s.exp) byCat.set(e.category, (byCat.get(e.category) || 0) + e.amount);
     const cats = [...byCat].sort((a, b) => b[1] - a[1]).slice(0, 8);
     const top = cats.length ? cats[0][1] : 1;
+    const pick = byCat.has(state.bcat) ? state.bcat : null;
     const rows = [
-      ...s.fx.map(({ f, date }) => ({ date, amount: f.amount, fixed: true, item: f, label: f.name, tag: "고정" })),
-      ...s.exp.map(e => ({ date: e.date, amount: e.amount, fixed: false, item: e, label: e.memo || e.category, tag: e.category })),
-    ].sort((a, b) => b.date.localeCompare(a.date) || b.amount - a.amount);
+      ...s.fx.map(({ f, date }) => ({ date, amount: f.amount, fixed: true, item: f, label: f.name, tag: "고정", cat: f.category })),
+      ...s.exp.map(e => ({ date: e.date, amount: e.amount, fixed: false, item: e, label: e.memo || e.category, tag: e.category, cat: e.category })),
+    ].filter(r => !pick || r.cat === pick)
+     .sort((a, b) => b.date.localeCompare(a.date) || b.amount - a.amount);
+    const pickCat = c => { state.bcat = state.bcat === c ? null : c; renderBudget(); };
     return el("div", { class: "mdetail" },
       el("div", { class: "md-sum" },
         el("h4", {}, `${s.m}월${s.future ? " 예정" : ""}`),
@@ -964,13 +975,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         el("span", {}, "고정비 ", el("b", {}, won(s.fixed))),
         el("span", {}, "변동 지출 ", el("b", {}, won(s.variable)))),
       el("div", {},
-        el("div", { class: "sublbl" }, "분류별"),
-        cats.length ? el("ul", { class: "catbars" }, cats.map(([c, v]) => el("li", {},
-          el("span", {}, c),
-          el("span", { class: "track" }, el("span", { class: "bar2", style: `display:block;width:${v / top * 100}%` })),
-          el("span", { class: "amt" }, man(v))))) : el("div", { class: "fx-sub" }, "이 달에는 아직 나간 돈이 없어요.")),
+        el("div", { class: "sublbl" }, "분류별", cats.length ? el("small", { style: "font-weight:400;margin-left:6px" }, "누르면 그 분류만 보여요") : null),
+        cats.length ? el("ul", { class: "catbars" + (pick ? " picking" : "") }, cats.map(([c, v]) => el("li", {},
+          el("button", { class: c === pick ? "on" : "", "aria-pressed": String(c === pick), onclick: () => pickCat(c) },
+            el("span", {}, c),
+            el("span", { class: "track" }, el("span", { class: "bar2", style: `display:block;width:${v / top * 100}%` })),
+            el("span", { class: "amt" }, man(v)))))) : el("div", { class: "fx-sub" }, "이 달에는 아직 나간 돈이 없어요.")),
       el("div", {},
-        el("div", { class: "sublbl" }, `내역 ${rows.length}건`),
+        el("div", { class: "sublbl" }, pick ? `${pick} 내역 ${rows.length}건 · ${won(byCat.get(pick))}` : `내역 ${rows.length}건`,
+          pick ? el("button", { class: "cat-clear", onclick: () => pickCat(pick) }, "전체 보기") : null),
         rows.length ? el("ul", { class: "ds-list" }, rows.map(r => el("li", {},
           el("button", { class: "ds-row", onclick: () => r.fixed ? openFixedEditor(r.item) : openExpenseEditor(r.item) },
             el("span", { class: "ds-tag" + (r.fixed ? " fixed" : "") }, r.tag),
