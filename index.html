@@ -783,7 +783,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
   const normFixed = v => ({
     id: String(v.id), name: String(v.name || ""), amount: Number(v.amount) || 0, category: String(v.category || "기타"),
     cycle: v.cycle === "yearly" ? "yearly" : "monthly", day: Number(v.day) || 1, payMonth: Number(v.payMonth) || 1,
-    from: String(v.from || "0000-00"), to: String(v.to || ""), memo: String(v.memo || ""), createdAt: v.createdAt,
+    from: String(v.from || "0000-00"), to: String(v.to || ""), who: Array.isArray(v.who) ? v.who : [], memo: String(v.memo || ""), createdAt: v.createdAt,
   });
   const normExp = v => ({
     id: String(v.id), date: String(v.date || ""), amount: Number(v.amount) || 0, category: String(v.category || "기타"),
@@ -970,7 +970,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         el("button", { class: "pillbtn alt", style: "margin-left:auto;height:32px;font-size:14px", onclick: () => openFixedEditor(null) }, "+ 추가")),
       list.length ? el("ul", { class: "fixlist" }, list.map(f => {
         const on = activeIn(f, nowYm);
-        const sub = [f.category, f.to ? `${f.to.replace("-", ".")}까지` : null, !on && f.from > nowYm ? `${f.from.replace("-", ".")}부터` : null, !on && f.to && f.to < nowYm ? "끝남" : null].filter(Boolean).join(" · ");
+        const sub = [whoText(f.who) || "가족 공동", f.category, f.to ? `${f.to.replace("-", ".")}까지` : null, !on && f.from > nowYm ? `${f.from.replace("-", ".")}부터` : null, !on && f.to && f.to < nowYm ? "끝남" : null].filter(Boolean).join(" · ");
         return el("li", {}, el("button", { class: "fx-row" + (on ? "" : " off"), onclick: () => openFixedEditor(f) },
           el("span", { class: "fx-day" }, f.cycle === "yearly" ? el("span", {}, `${f.payMonth}월`, el("br"), `${f.day}일`) : `${f.day}일`),
           el("span", { style: "min-width:0" }, el("div", { class: "fx-name" }, f.name), el("div", { class: "fx-sub" }, (f.cycle === "yearly" ? "매년 · " : "매월 · ") + sub)),
@@ -1008,6 +1008,17 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     return { body, close };
   }
   const field = (id, label, input) => el("div", { class: "field" }, el("label", { for: id }, label), input);
+  // 아빠·엄마·로미 고르기 (여러 명 가능, 아무도 안 고르면 가족 공동)
+  function whoPicker(selected) {
+    const who = new Set(selected || []);
+    const btns = PEOPLE.map(p => {
+      const b = el("button", { type: "button", class: "pick", style: `--c:${p.c};--cs:${p.cs}`, "aria-pressed": String(who.has(p.id)) }, el("span", { class: "dot" }), p.name);
+      b.addEventListener("click", () => { who.has(p.id) ? who.delete(p.id) : who.add(p.id); b.setAttribute("aria-pressed", String(who.has(p.id))); });
+      return b;
+    });
+    return { node: el("div", { class: "who" }, btns), get: () => PEOPLE.map(p => p.id).filter(id => who.has(id)) };
+  }
+  const whoText = who => (who && who.length ? whoLabel(who) : "");
   function moneyInput(id, v) {
     const i = el("input", { type: "text", id, inputmode: "numeric", autocomplete: "off", placeholder: "0", value: v ? Number(v).toLocaleString("ko-KR") : "" });
     i.addEventListener("input", () => { const d = i.value.replace(/[^\d]/g, "").slice(0, 10); i.value = d ? Number(d).toLocaleString("ko-KR") : ""; });
@@ -1044,6 +1055,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     const from = el("input", { type: "month", id: "x-from", value: d.from });
     const to = el("input", { type: "month", id: "x-to", value: d.to || "" });
     const memo = el("input", { type: "text", id: "x-memo", maxlength: "200", placeholder: "카드, 계좌 등", value: d.memo || "" });
+    const whoPick = whoPicker(d.who);
     const err = el("div", { class: "err", role: "alert" });
     const slot = el("div");
     const presets = el("div", { class: "presets" }, FIXED_PRESETS.map(([n, c]) => el("button", { type: "button", class: "preset", onclick: () => { name.value = n; category.value = c; amount.focus(); } }, n)));
@@ -1055,6 +1067,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
       el("div", { class: "row2" }, field("x-cycle", "주기", cycle), field("x-day", "결제일", day)),
       pmWrap,
       el("div", { class: "row2" }, field("x-from", "시작 달", from), field("x-to", "끝나는 달 (없으면 비워 두기)", to)),
+      el("div", { class: "field" }, el("span", { class: "lbl" }, "누구 몫인가요? (안 고르면 가족 공동)"), whoPick.node),
       field("x-memo", "메모", memo),
       err, slot,
       el("div", { class: "actions" },
@@ -1065,7 +1078,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         el("button", { type: "button", class: "btn", onclick: close }, "닫기"), saveBtn));
     form.addEventListener("submit", async e => {
       e.preventDefault();
-      const b = { name: name.value.trim(), amount: moneyVal(amount), category: category.value, cycle: cycle.value, day: Number(day.value), payMonth: Number(payMonth.value), from: from.value, to: to.value, memo: memo.value.trim() };
+      const b = { name: name.value.trim(), amount: moneyVal(amount), category: category.value, cycle: cycle.value, day: Number(day.value), payMonth: Number(payMonth.value), from: from.value, to: to.value, who: whoPick.get(), memo: memo.value.trim() };
       if (!b.name) { err.textContent = "이름을 적어 주세요."; name.focus(); return; }
       if (!b.amount) { err.textContent = "금액을 적어 주세요."; amount.focus(); return; }
       if (!b.from) { err.textContent = "시작 달을 골라 주세요."; return; }
@@ -1336,7 +1349,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
       const day = r.day || (d ? d.d : 0) || 1;
       const name = (r.fullName || r.name || r.memo || extraCat || category).slice(0, 40);
       const from = d && d.hasYear ? ymOf(d.y, d.m) : ymOf(NOW_Y, NOW_M);
-      it.body = { name, amount: Math.max(0, amount || 0), category, cycle, day, payMonth: cycle === "yearly" ? (d ? d.m : NOW_M) : NOW_M, from, to: "", memo: r.name && r.memo ? r.memo.slice(0, 200) : "" };
+      it.body = { name, amount: Math.max(0, amount || 0), category, cycle, day, payMonth: cycle === "yearly" ? (d ? d.m : NOW_M) : NOW_M, from, to: "", who: r.who || [], memo: r.name && r.memo ? r.memo.slice(0, 200) : "" };
       if (it.ok && state.fixed.some(f => f.name === name && f.amount === it.body.amount && f.cycle === cycle)) { it.dup = true; it.use = false; it.why = "이미 있는 고정비 같아요"; }
     }
     if (!it.ok) it.use = false;

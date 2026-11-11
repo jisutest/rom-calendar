@@ -177,7 +177,8 @@ export function cleanFixed(b) {
   const from = MONTH.test(String(b.from || "")) ? String(b.from) : "";
   const to = MONTH.test(String(b.to || "")) ? String(b.to) : "";
   if (!name || !amount || !from || (to && to < from)) return null;
-  return { name, amount, category: cat(b.category), cycle, day, payMonth, from, to, memo: String(b.memo || "").trim().slice(0, 200) };
+  const who = Array.isArray(b.who) ? WHO.filter(w => b.who.includes(w)) : [];
+  return { name, amount, category: cat(b.category), cycle, day, payMonth, from, to, who, memo: String(b.memo || "").trim().slice(0, 200) };
 }
 
 // 변동 지출: 그날그날 쓴 돈
