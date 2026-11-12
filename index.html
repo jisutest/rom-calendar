@@ -44,6 +44,8 @@
   --var: #8c7bff;              /* 가계부: 변동 지출 */
   --var-soft: #ece9ff;
   --var-ink: #5a48d6;
+  /* 가계부 분류 색: 분류마다 색상(--h)만 다르고, 밝기·채도는 여기서 정한다 (파스텔) */
+  --cat-s: 85%; --cat-l: 94%; --cat-l-hover: 90%; --cat-bar-s: 72%; --cat-bar-l: 72%;
   --shadow: 0 18px 40px -12px rgba(255, 92, 151, .35);
   --card: 0 2px 0 rgba(255, 92, 151, .08), 0 12px 28px -18px rgba(255, 92, 151, .45);
   --f-title: "Cafe24 Ssurround", "Ongleip Yoontang", "Noto Sans KR", system-ui, sans-serif;
@@ -59,6 +61,7 @@
     --romi: #ffb07f; --romi-soft: #4a2c1d; --fam: #cb98ff; --fam-soft: #3a2550;
     --red: #ff5a63; --jp-ink: #ffffff; --sat: #98a8ff; --head: #c9497c; --bar-ink: #2a0d1b;
     --fixed: #e64980; --fixed-soft: #4a1f30; --var: #8174f0; --var-soft: #2c2752; --var-ink: #b9b0ff;
+    --cat-s: 30%; --cat-l: 21%; --cat-l-hover: 25%; --cat-bar-s: 55%; --cat-bar-l: 62%;
     --a1: #3987e5; --a2: #d95926; --a3: #199e70; --a4: #c98500; --a5: #d55181; --a6: #008300;
     --shadow: 0 18px 40px -12px rgba(0,0,0,.6); --card: 0 12px 28px -18px rgba(0,0,0,.7);
     color-scheme: dark;
@@ -71,6 +74,7 @@
   --romi: #ffb07f; --romi-soft: #4a2c1d; --fam: #cb98ff; --fam-soft: #3a2550;
   --red: #ff5a63; --jp-ink: #ffffff; --sat: #98a8ff; --head: #c9497c; --bar-ink: #2a0d1b;
     --fixed: #e64980; --fixed-soft: #4a1f30; --var: #8174f0; --var-soft: #2c2752; --var-ink: #b9b0ff;
+    --cat-s: 30%; --cat-l: 21%; --cat-l-hover: 25%; --cat-bar-s: 55%; --cat-bar-l: 62%;
     --a1: #3987e5; --a2: #d95926; --a3: #199e70; --a4: #c98500; --a5: #d55181; --a6: #008300;
   --shadow: 0 18px 40px -12px rgba(0,0,0,.6); --card: 0 12px 28px -18px rgba(0,0,0,.7);
   color-scheme: dark;
@@ -247,6 +251,12 @@ main.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr
 .catbars button:hover { background: var(--surface-2); }
 .catbars button.on { background: var(--pink-soft); font-weight: 700; }
 .catbars button.on .bar2 { background: var(--pink); }
+/* 분류 색: style="--h:색상; --sx:1(기타는 0=회색)" 이 붙은 요소만 */
+.catbars button[style*="--h"] .bar2 { background: hsl(var(--h) calc(var(--cat-bar-s) * var(--sx, 1)) var(--cat-bar-l)); }
+.catbars button[style*="--h"].on { background: hsl(var(--h) calc(var(--cat-s) * var(--sx, 1)) var(--cat-l)); }
+.ds-row[style*="--h"] { background: hsl(var(--h) calc(var(--cat-s) * var(--sx, 1)) var(--cat-l)); }
+.ds-row[style*="--h"]:hover { background: hsl(var(--h) calc(var(--cat-s) * var(--sx, 1)) var(--cat-l-hover)); }
+.ds-row[style*="--h"] .ds-tag { box-shadow: 0 0 0 1.5px var(--surface); }
 .catbars.picking button:not(.on) { opacity: .55; }
 .cat-clear { margin-left: 6px; border: 0; background: var(--pink-soft); color: var(--pink); border-radius: 999px; padding: 1px 9px; font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; }
 .catbars .track { height: 10px; }
@@ -779,6 +789,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
   // 가계부: 고정비(매월·매년 나가는 돈) + 변동 지출(그날 쓴 돈)
   // =====================================================================
   const CATS = ["주거·관리비", "통신", "보험", "육아·로미", "교육", "구독", "교통·차량", "식비", "생활용품", "의료", "경조사", "대출·이자", "용돈", "기타"];
+  // 분류별 파스텔 색상(색상환 각도). 밝기·채도는 CSS --cat-* 토큰이 테마에 맞춰 정한다.
+  const CAT_HUE = { "대출·이자": 0, "주거·관리비": 26, "교육": 50, "식비": 78, "용돈": 104, "생활용품": 130, "의료": 156,
+    "통신": 182, "교통·차량": 206, "구독": 230, "보험": 256, "경조사": 282, "육아·로미": 330 };
+  const catStyle = c => c in CAT_HUE ? `--h:${CAT_HUE[c]};--sx:1` : "--h:0;--sx:0";
   const FIXED_PRESETS = [["관리비", "주거·관리비"], ["통신비", "통신"], ["보험료", "보험"], ["어린이집", "육아·로미"], ["OTT 구독", "구독"], ["대출이자", "대출·이자"], ["아빠 용돈", "용돈"], ["엄마 용돈", "용돈"]];
   const EXP_QUICK = ["식비", "생활용품", "육아·로미", "의료", "교통·차량", "경조사"];
   const NOW_Y = now.getFullYear(), NOW_M = now.getMonth() + 1;
@@ -977,7 +991,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
       el("div", {},
         el("div", { class: "sublbl" }, "분류별", cats.length ? el("small", { style: "font-weight:400;margin-left:6px" }, "누르면 그 분류만 보여요") : null),
         cats.length ? el("ul", { class: "catbars" + (pick ? " picking" : "") }, cats.map(([c, v]) => el("li", {},
-          el("button", { class: c === pick ? "on" : "", "aria-pressed": String(c === pick), onclick: () => pickCat(c) },
+          el("button", { class: c === pick ? "on" : "", style: catStyle(c), "aria-pressed": String(c === pick), onclick: () => pickCat(c) },
             el("span", {}, c),
             el("span", { class: "track" }, el("span", { class: "bar2", style: `display:block;width:${v / top * 100}%` })),
             el("span", { class: "amt" }, man(v)))))) : el("div", { class: "fx-sub" }, "이 달에는 아직 나간 돈이 없어요.")),
@@ -985,7 +999,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         el("div", { class: "sublbl" }, pick ? `${pick} 내역 ${rows.length}건 · ${won(byCat.get(pick))}` : `내역 ${rows.length}건`,
           pick ? el("button", { class: "cat-clear", onclick: () => pickCat(pick) }, "전체 보기") : null),
         rows.length ? el("ul", { class: "ds-list" }, rows.map(r => el("li", {},
-          el("button", { class: "ds-row", onclick: () => r.fixed ? openFixedEditor(r.item) : openExpenseEditor(r.item) },
+          el("button", { class: "ds-row", style: catStyle(r.cat), title: r.cat, onclick: () => r.fixed ? openFixedEditor(r.item) : openExpenseEditor(r.item) },
             el("span", { class: "ds-tag" + (r.fixed ? " fixed" : "") }, r.tag),
             el("span", { class: "ds-name" }, el("small", {}, `${Number(r.date.slice(5, 7))}/${Number(r.date.slice(8))}`), r.label),
             el("span", { class: "ds-amt" }, won(r.amount)))))) : null));
@@ -1018,9 +1032,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     return el("div", { class: "dayspend" },
       el("div", { class: "ds-head" }, el("span", {}, "이 날 나간 돈"), el("b", {}, total ? won(total) : "없음")),
       fx.length || ex.length ? el("ul", { class: "ds-list" },
-        fx.map(({ f }) => el("li", {}, el("button", { class: "ds-row", onclick: () => openFixedEditor(f) },
+        fx.map(({ f }) => el("li", {}, el("button", { class: "ds-row", style: catStyle(f.category), title: f.category, onclick: () => openFixedEditor(f) },
           el("span", { class: "ds-tag fixed" }, "고정"), el("span", { class: "ds-name" }, f.name), el("span", { class: "ds-amt" }, won(f.amount))))),
-        ex.map(e => el("li", {}, el("button", { class: "ds-row", onclick: () => openExpenseEditor(e) },
+        ex.map(e => el("li", {}, el("button", { class: "ds-row", style: catStyle(e.category), title: e.category, onclick: () => openExpenseEditor(e) },
           el("span", { class: "ds-tag" }, e.category), el("span", { class: "ds-name" }, e.memo || e.category), el("span", { class: "ds-amt" }, won(e.amount)))))) : null,
       el("button", { class: "addspend", onclick: () => openExpenseEditor(null, k) }, "+ 지출 기록"));
   }
