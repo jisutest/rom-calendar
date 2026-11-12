@@ -271,6 +271,14 @@ main.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr
 .ds-name small { color: var(--muted); margin-right: 5px; font-variant-numeric: tabular-nums; }
 .ds-amt { font-weight: 700; font-variant-numeric: tabular-nums; }
 .fixlist { list-style: none; margin: 0; padding: 0; }
+/* 고정비 한눈에: 옆의 '연간 지출 흐름' 카드 높이에 맞추고, 넘치는 목록은 스크롤 */
+.fixcard { display: flex; flex-direction: column; }
+.fixcard .fixlist { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--pink-2) transparent; margin-right: -6px; padding-right: 6px; }
+@media (min-width: 1001px) {
+  .fixcard { align-self: stretch; height: 0; min-height: max(100%, 380px); }
+  .fixcard .fixlist { flex: 1 1 0; min-height: 0; }
+}
+@media (max-width: 1000px) { .fixcard .fixlist { max-height: 440px; } }
 .fx-row { width: 100%; display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 0; border-bottom: 1.5px dashed var(--line); background: transparent; padding: 10px 2px; text-align: left; }
 .fx-row:hover .fx-name { color: var(--fixed); }
 .fx-row.off { opacity: .5; }
@@ -1011,7 +1019,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     const list = myFixed().sort((a, b) =>
       (activeIn(b, nowYm) - activeIn(a, nowYm)) || (a.cycle === b.cycle ? 0 : a.cycle === "monthly" ? -1 : 1) ||
       (a.cycle === "yearly" ? a.payMonth - b.payMonth : 0) || a.day - b.day || b.amount - a.amount);
-    return el("div", { class: "card" },
+    return el("div", { class: "card fixcard" },
       el("div", { class: "card-head" }, el("h3", {}, "고정비 한눈에"),
         el("button", { class: "pillbtn alt", style: "margin-left:auto;height:32px;font-size:14px", onclick: () => openFixedEditor(null) }, "+ 추가")),
       list.length ? el("ul", { class: "fixlist" }, list.map(f => {
