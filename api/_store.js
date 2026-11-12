@@ -218,7 +218,16 @@ export function cleanExpense(b) {
 }
 
 // 자산: 지금 가진 돈과 빚. 적금은 매달 넣는 돈·시작 달·기간으로 잔액을 자동 계산한다.
-const ASSET_KINDS = ["cash", "saving", "invest", "realestate", "pension", "etc", "debt"];
+const whole = v => { const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 0 && n <= 1e12 ? n : null; };
+// 대출 상환 한 번: 날짜, 갚은 원금, 낸 이자
+function cleanRepay(r) {
+  if (!r || typeof r !== "object" || !DATE.test(String(r.date || ""))) return null;
+  const principal = whole(r.principal) || 0, interest = whole(r.interest) || 0;
+  if (!principal && !interest) return null;
+  const id = /^[a-z0-9]{1,16}$/.test(String(r.id || "")) ? String(r.id) : randomUUID().slice(0, 8);
+  return { id, date: String(r.date), principal, interest, memo: String(r.memo || "").trim().slice(0, 60) };
+}
+const ASSET_KINDS =["cash", "saving", "invest", "realestate", "pension", "etc", "debt"];
 const OWNERS = ["dad", "mom", "romi", "family"];
 export function cleanAsset(b) {
   if (!b || typeof b !== "object") return null;
@@ -236,6 +245,24 @@ export function cleanAsset(b) {
     out.rate = Number.isFinite(rate) && rate >= 0 && rate <= 30 ? Math.round(rate * 100) / 100 : 0;
     out.auto = !!(b.auto && out.monthly && out.start);
     if (!out.auto && !amount && !out.monthly) return null;
+  } else if (kind === "invest") {
+    // 투자: 달마다 투자 원금(p)·평가금액(v)을 적어 수익률을 본다 (최근 120개월)
+    out.log = {};
+    if (b.log && typeof b.log === "object") {
+      for (const k of Object.keys(b.log).filter(k => MONTH.test(k)).sort().slice(-120)) {
+        const r = b.log[k] || {}, p = whole(r.p), v = whole(r.v);
+        if (p != null && v != null && (p || v)) out.log[k] = { p, v };
+      }
+    }
+    if (!amount && !Object.keys(out.log).length) return null;
+  } else if (kind === "debt") {
+    // 대출: 처음 빌린 돈·금리와 상환 이력. 다 갚으면 남은 빚 0도 허용
+    out.orig = money(b.orig);
+    const rate = Number(b.rate);
+    out.rate = Number.isFinite(rate) && rate >= 0 && rate <= 30 ? Math.round(rate * 100) / 100 : 0;
+    out.repays = (Array.isArray(b.repays) ? b.repays : []).map(cleanRepay).filter(Boolean)
+      .sort((x, y) => x.date.localeCompare(y.date)).slice(-600);
+    if (!amount && !out.orig) return null;
   } else if (!amount) return null;
   // 달마다 마지막으로 적은 금액 (순자산 추이용, 최근 120개월)
   const hist = {};

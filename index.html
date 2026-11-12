@@ -437,6 +437,46 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
 .fx-amt.neg { color: var(--red); }
 .meter.save { height: 5px; margin-top: 5px; max-width: 180px; }
 .meter.save i { background: var(--a2); }
+/* 투자 수익률 · 대출 상환 (수익은 빨강 계열, 손실은 파랑 — 한국 증권 앱과 같은 방향) */
+.gain { color: var(--fixed); } .loss { color: var(--a1); } .flat { color: var(--muted); }
+.ret { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; margin-left: 6px; font-family: var(--f-body); }
+.ret.big { font-family: var(--f-display); font-size: 22px; font-weight: 400; margin-left: auto; }
+.meter.save.debt i { background: var(--a3); }
+.agrid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+.agrid2.one { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 1000px) { .agrid2 { grid-template-columns: minmax(0, 1fr); } }
+.inv-total { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 12px 14px; border-radius: 16px; background: var(--surface-2); font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+.inv-total b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.inv-total b.gain { color: var(--fixed); } .inv-total b.loss { color: var(--a1); }
+.inv-list { list-style: none; margin: 0; padding: 0; }
+.inv-list > li { padding: 12px 2px; border-bottom: 1.5px dashed var(--line); }
+.inv-list > li:last-child { border-bottom: 0; }
+.inv-h { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.inv-h .ret { font-size: 14px; }
+.linkish { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--fg); text-align: left; cursor: pointer; }
+.inv-h .linkish { font-family: var(--f-display); font-weight: 400; font-size: 16px; }
+.linkish:hover { color: var(--pink); }
+.linkish.more { font-size: 12px; color: var(--pink); margin-top: 6px; }
+.minibtn { margin-left: auto; height: 28px; padding: 0 12px; border-radius: 999px; border: 2px solid var(--line); background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.minibtn.due { border-color: var(--pink); color: var(--pink); }
+.minibtn:hover { background: var(--pink-soft); }
+.retbars { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; height: 76px; margin-top: 10px; }
+.retbars .rb { display: flex; flex-direction: column; min-width: 0; }
+.retbars .rplot { position: relative; flex: 1; }
+.retbars .rplot::before { content: ""; position: absolute; left: -2px; right: -2px; top: 50%; border-top: 1px dashed var(--line); }
+.retbars .rplot i { position: absolute; left: 50%; width: min(64%, 26px); transform: translateX(-50%); border-radius: 3px; background: currentColor; }
+.retbars small { text-align: center; font-size: 10px; color: var(--muted); line-height: 15px; }
+.debt-left { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.repay-meter { position: relative; height: 18px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin: 6px 0; }
+.repay-meter i { display: block; height: 100%; background: var(--a3); border-radius: 999px; opacity: .75; }
+.repay-meter span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--fg); }
+.repay-list, .loglist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.repay-list li, .loglist li { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; font-size: 12.5px; padding: 5px 9px; border-radius: 10px; background: var(--surface-2); font-variant-numeric: tabular-nums; }
+.repay-list .m, .loglist .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.repay-list .i { color: var(--muted); font-size: 11.5px; }
+.loglist { max-height: 220px; overflow: auto; }
+.loglist .x { width: 24px; height: 24px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); font-size: 16px; line-height: 1; }
+.loglist .x:hover { background: var(--pink-soft); color: var(--red); }
 .trendbox { margin-top: 16px; padding-top: 14px; border-top: 2px dashed var(--line); }
 .trendbox .up { color: var(--a3); } .trendbox .down { color: var(--red); }
 .trend-wrap { position: relative; height: 120px; }
@@ -1608,7 +1648,22 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     amount: Number(v.amount) || 0, memo: String(v.memo || ""), monthly: Number(v.monthly) || 0, start: String(v.start || ""),
     months: Number(v.months) || 0, rate: Number(v.rate) || 0, auto: !!v.auto,
     history: v.history && typeof v.history === "object" ? v.history : {}, createdAt: v.createdAt, updatedAt: v.updatedAt,
+    log: v.log && typeof v.log === "object" ? v.log : {},                 // 투자: { "2026-11": { p: 원금, v: 평가금액 } }
+    orig: Number(v.orig) || 0, repays: Array.isArray(v.repays) ? v.repays : [], // 대출: 처음 빌린 돈, 상환 이력
   });
+  // 저장할 때 모든 필드를 함께 보낸다 (PUT은 통째로 바꾸므로 빠진 필드는 지워진다)
+  const assetBody = (a, patch = {}) => ({
+    name: a.name, kind: a.kind, owner: a.owner, amount: a.amount, memo: a.memo, monthly: a.monthly, start: a.start, months: a.months,
+    rate: a.rate, auto: a.auto, history: { ...a.history }, log: { ...a.log }, orig: a.orig, repays: [...a.repays], ...patch,
+  });
+  // ----- 투자 수익률 -----
+  const investRows = a => Object.keys(a.log).sort().map(ym => ({ ym, p: Number(a.log[ym].p) || 0, v: Number(a.log[ym].v) || 0 }));
+  const retOf = (v, p) => (p > 0 ? (v - p) / p * 100 : null);
+  const fmtRet = r => (r == null ? "—" : `${r > 0 ? "+" : r < 0 ? "−" : ""}${Math.abs(r).toFixed(1)}%`);
+  const retCls = r => (r == null || Math.abs(r) < 0.05 ? "flat" : r > 0 ? "gain" : "loss");
+  // ----- 대출 상환 -----
+  const repaySum = a => a.repays.reduce((s, r) => ({ p: s.p + (Number(r.principal) || 0), i: s.i + (Number(r.interest) || 0) }), { p: 0, i: 0 });
+  const repaidPct = a => (a.orig > 0 ? Math.max(0, Math.min(100, (a.orig - a.amount) / a.orig * 100)) : null);
   // 적금: 몇 번 넣었는지 · 지금 잔액(원금) · 만기
   function savingInfo(a, ym = NOW_YM) {
     if (a.kind !== "saving" || !a.monthly || !a.start) return null;
@@ -1678,14 +1733,118 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         el("ul", { class: "fixlist" }, g.items.map(a => {
           const si = savingInfo(a);
           const sub = [OWN[a.owner].name, si && a.months ? `${si.paid}/${a.months}회` : null, si && si.end ? (si.done ? "만기 완료" : `만기 ${si.end.replace("-", ".")}`) : null, a.monthly ? `매달 ${man(a.monthly)}원` : null, !si && a.updatedAt ? `${new Date(a.updatedAt).getMonth() + 1}/${new Date(a.updatedAt).getDate()} 기준` : null].filter(Boolean).join(" · ");
+          const last = a.kind === "invest" ? investRows(a).pop() : null;
+          const ret = last ? retOf(last.v, last.p) : null;
+          const rp = a.kind === "debt" ? repaidPct(a) : null;
           return el("li", {}, el("button", { class: "fx-row arow", onclick: () => openAssetEditor(a) },
             el("span", { class: "a-ic", style: `--c:${AK[a.kind].c}` }, OWN[a.owner].name.slice(0, 2)),
-            el("span", { style: "min-width:0" }, el("div", { class: "fx-name" }, a.name), el("div", { class: "fx-sub" }, sub),
-              si && a.months ? el("div", { class: "meter save", role: "img", "aria-label": `${a.months}회 중 ${si.paid}회 납입` }, el("i", { style: `width:${Math.min(100, si.paid / a.months * 100)}%` })) : null),
+            el("span", { style: "min-width:0" }, el("div", { class: "fx-name" }, a.name,
+                ret != null ? el("span", { class: "ret " + retCls(ret) }, fmtRet(ret)) : null),
+              el("div", { class: "fx-sub" }, sub),
+              si && a.months ? el("div", { class: "meter save", role: "img", "aria-label": `${a.months}회 중 ${si.paid}회 납입` }, el("i", { style: `width:${Math.min(100, si.paid / a.months * 100)}%` })) : null,
+              rp != null ? el("div", { class: "meter save debt", role: "img", "aria-label": `대출 ${Math.round(rp)}% 상환` }, el("i", { style: `width:${rp}%` })) : null),
             el("span", { class: "fx-amt" + (a.kind === "debt" ? " neg" : "") }, (a.kind === "debt" ? "−" : "") + won(valueOf(a) || 0))));
         })))) : el("div", { class: "fx-sub" }, "오른쪽 위 ‘+ 추가’로 시작하세요."));
 
-    box.replaceChildren(head, tiles, el("div", { class: "bud-grid" }, comp, listCard));
+    const invests = list.filter(a => a.kind === "invest");
+    const debts = list.filter(a => a.kind === "debt");
+    const extra = [invests.length ? investCard(invests) : null, debts.length ? debtCard(debts) : null].filter(Boolean);
+    box.replaceChildren(head, tiles, el("div", { class: "bud-grid" }, comp, listCard),
+      extra.length ? el("div", { class: "agrid2" + (extra.length === 1 ? " one" : "") }, extra) : "");
+  }
+
+  // ----- 투자 수익률 카드: 계좌마다 이번 수익률 + 달별 수익률 막대 -----
+  function investCard(items) {
+    const latest = items.map(a => ({ a, rows: investRows(a) })).map(x => ({ ...x, last: x.rows[x.rows.length - 1] }));
+    const withP = latest.filter(x => x.last && x.last.p > 0);
+    const P = withP.reduce((s, x) => s + x.last.p, 0), V = withP.reduce((s, x) => s + x.last.v, 0);
+    const totRet = retOf(V, P);
+    return el("div", { class: "card" },
+      el("div", { class: "card-head" }, el("h3", {}, "투자 수익률"),
+        el("button", { class: "pillbtn alt asset", style: "margin-left:auto;height:32px;font-size:14px", onclick: () => openAssetEditor(null, "invest") }, "+ 계좌")),
+      withP.length ? el("div", { class: "inv-total" },
+        el("span", {}, "넣은 돈 ", el("b", {}, won(P))), el("span", {}, "지금 ", el("b", {}, won(V))),
+        el("span", {}, "손익 ", el("b", { class: retCls(totRet) }, `${V - P >= 0 ? "+" : "−"}${won(Math.abs(V - P))}`)),
+        el("span", { class: "ret big " + retCls(totRet) }, fmtRet(totRet))) : null,
+      el("ul", { class: "inv-list" }, latest.map(({ a, rows, last }) => {
+        const r = last ? retOf(last.v, last.p) : null;
+        const recent = rows.slice(-12);
+        const rets = recent.map(x => retOf(x.v, x.p));
+        const top = Math.max(1, ...rets.filter(x => x != null).map(Math.abs));
+        const thisMonth = last && last.ym === NOW_YM;
+        return el("li", {},
+          el("div", { class: "inv-h" },
+            el("button", { class: "linkish", onclick: () => openAssetEditor(a) }, a.name),
+            el("span", { class: "ret " + retCls(r) }, fmtRet(r)),
+            el("button", { class: "minibtn" + (thisMonth ? "" : " due"), onclick: () => openAssetEditor(a) }, thisMonth ? "이번 달 고치기" : `${NOW_M}월 기록하기`)),
+          el("div", { class: "fx-sub" }, last ? `${last.ym.replace("-", ".")} 기준 · 넣은 돈 ${won(last.p)} → ${won(last.v)}` : "아직 달별 기록이 없어요. 눌러서 이번 달 수익률을 적어 보세요."),
+          recent.length >= 2 ? el("div", { class: "retbars", role: "img", "aria-label": "달별 수익률: " + recent.map((x, i) => `${Number(x.ym.slice(5))}월 ${fmtRet(rets[i])}`).join(", ") },
+            recent.map((x, i) => el("div", { class: "rb", title: `${x.ym.replace("-", ".")} ${fmtRet(rets[i])} (${won(x.v)})` },
+              el("div", { class: "rplot" }, el("i", { class: retCls(rets[i]), style: `height:${rets[i] == null ? 0 : Math.max(2, Math.abs(rets[i]) / top * 50)}%;${(rets[i] || 0) >= 0 ? "bottom:50%" : "top:50%"}` })),
+              el("small", {}, `${Number(x.ym.slice(5))}월`)))) : null);
+      })));
+  }
+
+  // ----- 대출 상환 카드: 얼마나 갚았는지 + 최근 상환 이력 -----
+  function debtCard(items) {
+    return el("div", { class: "card" },
+      el("div", { class: "card-head" }, el("h3", {}, "대출 상환")),
+      el("ul", { class: "inv-list" }, items.map(a => {
+        const rp = repaidPct(a), s = repaySum(a);
+        const recent = [...a.repays].sort((x, y) => y.date.localeCompare(x.date)).slice(0, 4);
+        return el("li", {},
+          el("div", { class: "inv-h" },
+            el("button", { class: "linkish", onclick: () => openAssetEditor(a) }, a.name),
+            el("span", { class: "debt-left" }, a.amount ? `남은 빚 ${won(a.amount)}` : "다 갚았어요!"),
+            el("button", { class: "minibtn due", onclick: () => openRepay(a) }, "+ 상환 기록")),
+          rp != null ? el("div", { class: "repay-meter", role: "img", "aria-label": `처음 ${won(a.orig)} 중 ${Math.round(rp)}% 갚음` },
+            el("i", { style: `width:${rp}%` }), el("span", {}, `${rp.toFixed(1)}% 갚음`)) : null,
+          el("div", { class: "fx-sub" }, [a.orig ? `처음 ${won(a.orig)}` : "‘처음 빌린 돈’을 넣으면 몇 % 갚았는지 보여요", a.rate ? `금리 ${a.rate}%` : null,
+            s.p ? `갚은 원금 ${won(s.p)}` : null, s.i ? `낸 이자 ${won(s.i)}` : null].filter(Boolean).join(" · ")),
+          recent.length ? el("ul", { class: "repay-list" }, recent.map(r => el("li", {},
+            el("span", {}, r.date.slice(2).replaceAll("-", ".")), el("span", { class: "m" }, r.memo || "상환"),
+            el("span", {}, "원금 ", el("b", {}, won(r.principal))), r.interest ? el("span", { class: "i" }, `이자 ${won(r.interest)}`) : el("span")))) : null,
+          a.repays.length > recent.length ? el("button", { class: "linkish more", onclick: () => openAssetEditor(a) }, `이력 전체 ${a.repays.length}건 보기`) : null);
+      })));
+  }
+
+  // 대출 상환 기록하기: 갚은 원금만큼 남은 빚을 줄이고 이력에 남긴다
+  function openRepay(a, stack = false) {
+    const { body, close } = openSheet(`${a.name} 상환 기록`, stack);
+    const date = el("input", { type: "date", id: "r-date", value: TODAY });
+    const principal = moneyInput("r-principal", 0);
+    const interest = moneyInput("r-interest", 0);
+    const memo = el("input", { type: "text", id: "r-memo", maxlength: "60", placeholder: "예: 11월 원리금, 중도상환" });
+    const calc = el("div", { class: "save-calc" });
+    const err = el("div", { class: "err", role: "alert" });
+    const sync = () => calc.replaceChildren(el("div", {}, "지금 남은 빚 ", el("b", {}, won(a.amount)), " → 상환 후 ", el("b", {}, won(Math.max(0, a.amount - moneyVal(principal))))),
+      el("div", { class: "fx-sub" }, "원금만 남은 빚에서 빠지고, 이자는 ‘낸 이자’로 따로 모아 보여 드려요."));
+    [principal].forEach(i => i.addEventListener("input", sync)); sync();
+    const saveBtn = el("button", { type: "submit", class: "btn primary" }, "기록하기");
+    const form = el("form", { class: "form", novalidate: true },
+      el("div", { class: "row2" }, field("r-date", "갚은 날", date), field("r-memo", "메모 (선택)", memo)),
+      el("div", { class: "row2" }, field("r-principal", "갚은 원금 (원)", principal), field("r-interest", "낸 이자 (원, 선택)", interest)),
+      calc, err,
+      el("div", { class: "actions" }, el("span", { class: "spacer" }), el("button", { type: "button", class: "btn", onclick: close }, "닫기"), saveBtn));
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      const p = moneyVal(principal), i = moneyVal(interest);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date.value)) { err.textContent = "갚은 날을 골라 주세요."; return; }
+      if (!p && !i) { err.textContent = "갚은 원금이나 이자를 적어 주세요."; principal.focus(); return; }
+      if (p > a.amount) { err.textContent = `남은 빚(${won(a.amount)})보다 많이 적었어요.`; principal.focus(); return; }
+      const ym = date.value.slice(0, 7), h = { ...a.history };
+      const before = valueOf(a, ym) || a.amount;
+      for (const k of Object.keys(h)) if (k >= ym) h[k] = Math.max(0, Number(h[k]) - p);
+      if (!(ym in h)) h[ym] = Math.max(0, before - p);
+      const amount = Math.max(0, a.amount - p);
+      if (ym <= NOW_YM) h[NOW_YM] = amount;
+      const rec = { id: Math.random().toString(36).slice(2, 10), date: date.value, principal: p, interest: i, memo: memo.value.trim() };
+      saveBtn.disabled = true; err.textContent = "";
+      try { await saveTo("/api/assets", a, assetBody(a, { amount, history: h, repays: [...a.repays, rec] })); close(); if (stack) $("modalRoot").replaceChildren(); }
+      catch (e2) { err.textContent = writeError(e2); saveBtn.disabled = false; }
+    });
+    body.append(form);
+    setTimeout(() => principal.focus(), 30);
   }
 
   // 순자산 추이: 달마다 적어 둔 금액(없으면 이전 값)으로 최근 12개월
@@ -1748,13 +1907,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         el("li", {}, "상단 ‘매달 모으는 돈’은 만기 전인 적금의 월 납입액 합계예요."),
         el("li", {}, "자유적금처럼 금액이 들쭉날쭉하면 ‘자동’을 끄고 지금 잔액만 가끔 고쳐 적어도 돼요."),
         el("li", {}, "주식·통장 잔고도 한 달에 한 번쯤 금액을 고쳐 주면 ‘순자산 추이’ 선이 그려져요."),
-        el("li", {}, "대출은 ‘대출·빚’으로 넣으면 순자산에서 빠져요. 매달 갚는 원리금은 가계부 고정비(대출·이자)로 넣으세요.")),
+        el("li", {}, "주식·투자는 한 달에 한 번 ‘넣은 돈(원금)’과 ‘평가금액’(또는 수익률 %)을 적으면 ‘투자 수익률’에 달별 막대로 쌓여요."),
+        el("li", {}, "대출은 ‘대출·빚’으로 넣고 ‘처음 빌린 돈’을 적어 두세요. 갚을 때마다 ‘+ 상환 기록’을 누르면 남은 빚이 줄고 이력이 남아요."),
+        el("li", {}, "대출은 순자산에서 빠져요. 매달 갚는 원리금은 가계부 고정비(대출·이자)로도 넣으면 지출에 잡혀요.")),
       el("div", { class: "actions" }, el("span", { class: "spacer" }), el("button", { type: "button", class: "btn primary", onclick: close }, "알겠어요"))));
   }
 
-  function openAssetEditor(a) {
+  function openAssetEditor(a, presetKind) {
     const isNew = !a;
-    const d = a ? { ...a } : { name: "", kind: "cash", owner: "family", amount: 0, memo: "", monthly: 0, start: NOW_YM, months: 12, rate: 0, auto: true, history: {} };
+    const d = a ? { ...a } : normAsset({ id: "", name: "", kind: presetKind || "cash", owner: "family", amount: 0, memo: "", monthly: 0, start: NOW_YM, months: 12, rate: 0, auto: true, history: {} });
     const { body, close } = openSheet(isNew ? "자산 추가" : "자산 수정");
     let kind = d.kind;
     const name = el("input", { type: "text", id: "a-name", maxlength: "40", placeholder: "예: 생활비 통장", value: d.name });
@@ -1779,6 +1940,64 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
       el("div", { class: "row2" }, field("a-monthly", "매달 넣는 돈 (원)", monthly), field("a-start", "시작 달", start)),
       el("div", { class: "row2" }, field("a-months", "기간 (개월)", months), field("a-rate", "금리 (연 %, 선택)", rate)),
       calc);
+    // 투자: 달마다 넣은 돈(원금)·평가금액을 적으면 수익률이 나온다. 수익률(%)을 적으면 평가금액을 계산한다.
+    const log = { ...d.log };
+    const lastRow = investRows(d).pop();
+    const invYm = el("input", { type: "month", id: "a-ym", value: NOW_YM, max: NOW_YM });
+    const invP = moneyInput("a-p", (log[NOW_YM] || lastRow || {}).p || 0);
+    const invR = el("input", { type: "text", id: "a-ret", inputmode: "decimal", maxlength: "7", placeholder: "예: 12.5 또는 -3" });
+    const invList = el("div");
+    const showRet = () => { const r = retOf(moneyVal(amount), moneyVal(invP)); invR.value = r == null ? "" : String(Math.round(r * 100) / 100); };
+    invP.addEventListener("input", showRet);
+    amount.addEventListener("input", () => { if (kind === "invest") showRet(); });
+    invR.addEventListener("input", () => {
+      const r = Number(invR.value.replace(/[^\d.\-]/g, "")), p = moneyVal(invP);
+      if (p && Number.isFinite(r) && r > -100) amount.value = Math.round(p * (1 + r / 100)).toLocaleString("ko-KR");
+    });
+    invYm.addEventListener("change", () => {
+      const x = log[invYm.value];
+      if (x) { invP.value = x.p ? x.p.toLocaleString("ko-KR") : ""; amount.value = x.v ? x.v.toLocaleString("ko-KR") : ""; }
+      showRet();
+    });
+    function drawInvList() {
+      const rows = Object.keys(log).sort().reverse().map(ym => ({ ym, ...log[ym] }));
+      invList.replaceChildren(...(rows.length ? [el("div", { class: "sublbl" }, `달별 기록 ${rows.length}개`), el("ul", { class: "loglist" }, rows.map(x => {
+        const r = retOf(x.v, x.p);
+        return el("li", {},
+          el("button", { type: "button", class: "linkish", onclick: () => { invYm.value = x.ym; invYm.dispatchEvent(new Event("change")); } }, x.ym.replace("-", ".")),
+          el("span", { class: "n" }, `${won(x.p)} → ${won(x.v)}`), el("span", { class: "ret " + retCls(r) }, fmtRet(r)),
+          el("button", { type: "button", class: "x", "aria-label": `${x.ym} 기록 지우기`, onclick: () => { delete log[x.ym]; drawInvList(); } }, "×"));
+      }))] : []));
+    }
+    drawInvList(); showRet();
+    const investBox = el("div", { class: "savebox" },
+      el("div", { class: "fx-sub" }, "한 달에 한 번, 증권 앱에 보이는 ‘투자 원금’과 ‘평가금액’을 적어 주세요. 수익률만 알면 수익률을 적어도 돼요."),
+      el("div", { class: "row2" }, field("a-ym", "기록할 달", invYm), field("a-p", "넣은 돈 · 투자 원금 (원)", invP)),
+      field("a-ret", "수익률 (%) — 평가금액을 적으면 자동", invR),
+      invList);
+    // 대출: 처음 빌린 돈·금리 + 상환 이력
+    const orig = moneyInput("a-orig", d.orig);
+    const drate = el("input", { type: "text", id: "a-drate", inputmode: "decimal", maxlength: "5", placeholder: "예: 4.2", value: d.kind === "debt" && d.rate ? String(d.rate) : "" });
+    let repays = [...d.repays];
+    const undone = []; // 지운 상환 기록: 그 달부터 남은 빚을 되돌린다
+    const repList = el("div");
+    function drawRepList() {
+      const rows = [...repays].sort((x, y) => y.date.localeCompare(x.date));
+      const s = rows.reduce((t, r) => ({ p: t.p + r.principal, i: t.i + r.interest }), { p: 0, i: 0 });
+      repList.replaceChildren(...(rows.length ? [el("div", { class: "sublbl" }, `상환 이력 ${rows.length}건 · 원금 ${won(s.p)}`, s.i ? ` · 이자 ${won(s.i)}` : ""),
+        el("ul", { class: "loglist" }, rows.map(r => el("li", {},
+          el("span", {}, r.date.slice(2).replaceAll("-", ".")), el("span", { class: "n" }, `${r.memo ? r.memo + " · " : ""}원금 ${won(r.principal)}${r.interest ? ` · 이자 ${won(r.interest)}` : ""}`),
+          el("span"),
+          el("button", { type: "button", class: "x", "aria-label": `${r.date} 상환 기록 지우기 (남은 빚에 다시 더해요)`, onclick: () => {
+            repays = repays.filter(x => x !== r); undone.push(r);
+            amount.value = (moneyVal(amount) + r.principal).toLocaleString("ko-KR"); drawRepList();
+          } }, "×"))))] : [el("div", { class: "fx-sub" }, isNew ? "저장한 뒤 ‘+ 상환 기록’으로 갚은 돈을 적으면 남은 빚이 줄고 이력이 쌓여요." : "아직 상환 기록이 없어요.")]));
+    }
+    drawRepList();
+    const debtBox = el("div", { class: "savebox" },
+      el("div", { class: "row2" }, field("a-orig", "처음 빌린 돈 (원)", orig), field("a-drate", "금리 (연 %, 선택)", drate)),
+      repList,
+      isNew ? null : el("button", { type: "button", class: "btn", onclick: () => openRepay(a, true) }, "+ 상환 기록"));
     const memo = el("input", { type: "text", id: "a-memo", maxlength: "200", placeholder: "은행, 증권사, 계좌 끝자리 등", value: d.memo || "" });
     const err = el("div", { class: "err", role: "alert" });
     const slot = el("div");
@@ -1787,9 +2006,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
       hint.textContent = AK[kind].hint;
       const sv = kind === "saving";
       savingBox.hidden = !sv;
+      investBox.hidden = kind !== "invest";
+      debtBox.hidden = kind !== "debt";
       const isAuto = sv && auto.checked;
       amountField.hidden = isAuto;
-      amountLbl.textContent = kind === "debt" ? "남은 빚 (원)" : sv ? "지금 잔액 (원)" : kind === "realestate" ? "지금 시세·보증금 (원)" : kind === "invest" ? "지금 평가금액 (원)" : "지금 금액 (원)";
+      amountLbl.textContent = kind === "debt" ? "남은 빚 (원)" : sv ? "지금 잔액 (원)" : kind === "realestate" ? "지금 시세·보증금 (원)" : kind === "invest" ? "평가금액 (원)" : "지금 금액 (원)";
       name.placeholder = { cash: "예: 생활비 통장", saving: "예: 로미 청약통장", invest: "예: 아빠 주식 계좌", realestate: "예: 우리 집", pension: "예: 엄마 IRP", etc: "예: 자동차", debt: "예: 주택담보대출" }[kind];
       const si = savingInfo(cur());
       calc.replaceChildren(...(isAuto && si ? [
@@ -1804,7 +2025,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     const form = el("form", { class: "form", novalidate: true },
       el("div", { class: "field" }, el("span", { class: "lbl" }, "종류"), el("div", { class: "who" }, kindBtns), hint),
       el("div", { class: "row2" }, field("a-name", "이름", name), field("a-owner", "누구 것", owner)),
-      amountField, savingBox,
+      amountField, savingBox, investBox, debtBox,
       field("a-memo", "메모", memo),
       err, slot,
       el("div", { class: "actions" },
@@ -1816,14 +2037,27 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     form.addEventListener("submit", async e => {
       e.preventDefault();
       const isAuto = kind === "saving" && auto.checked;
-      const b = { name: name.value.trim(), kind, owner: owner.value, amount: isAuto ? 0 : moneyVal(amount), memo: memo.value.trim() };
+      const b = assetBody(d, { name: name.value.trim(), kind, owner: owner.value, amount: isAuto ? 0 : moneyVal(amount), memo: memo.value.trim() });
       if (kind === "saving") Object.assign(b, { monthly: moneyVal(monthly), start: start.value, months: Number(months.value) || 0, rate: Number(rate.value) || 0, auto: isAuto });
       if (!b.name) { err.textContent = "이름을 적어 주세요."; name.focus(); return; }
       if (isAuto && (!b.monthly || !b.start)) { err.textContent = "매달 넣는 돈과 시작 달을 넣어 주세요."; monthly.focus(); return; }
-      if (!isAuto && !b.amount) { err.textContent = "금액을 적어 주세요."; amount.focus(); return; }
-      if (rate.value && !(Number(rate.value) >= 0 && Number(rate.value) <= 30)) { err.textContent = "금리는 0–30 사이 숫자로 적어 주세요."; rate.focus(); return; }
+      if (kind === "debt") {
+        b.orig = moneyVal(orig); b.rate = Number(drate.value) || 0; b.repays = repays;
+        if (drate.value && !(Number(drate.value) >= 0 && Number(drate.value) <= 30)) { err.textContent = "금리는 0–30 사이 숫자로 적어 주세요."; drate.focus(); return; }
+        if (!b.amount && !b.orig) { err.textContent = "남은 빚을 적어 주세요."; amount.focus(); return; }
+      } else if (!isAuto && !b.amount) { err.textContent = "금액을 적어 주세요."; amount.focus(); return; }
+      if (kind === "saving" && rate.value && !(Number(rate.value) >= 0 && Number(rate.value) <= 30)) { err.textContent = "금리는 0–30 사이 숫자로 적어 주세요."; rate.focus(); return; }
       b.history = { ...(d.history || {}) };
-      if (!isAuto) b.history[NOW_YM] = b.amount;
+      if (kind === "invest") {
+        const ym = invYm.value && invYm.value <= NOW_YM ? invYm.value : NOW_YM;
+        log[ym] = { p: moneyVal(invP), v: b.amount };
+        b.log = log;
+        for (const [k, x] of Object.entries(log)) b.history[k] = x.v;
+        b.amount = log[Object.keys(log).sort().pop()].v; // 지금 금액 = 가장 최근 달 평가금액
+      } else if (!isAuto) {
+        if (kind === "debt") for (const r of undone) for (const k of Object.keys(b.history)) if (k >= r.date.slice(0, 7)) b.history[k] = Number(b.history[k]) + r.principal;
+        b.history[NOW_YM] = b.amount;
+      }
       saveBtn.disabled = true; err.textContent = "";
       try { await saveTo("/api/assets", a, b); close(); } catch (e2) { err.textContent = writeError(e2); saveBtn.disabled = false; }
     });
