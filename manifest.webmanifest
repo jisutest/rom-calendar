@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "롬데이즈",
+  "short_name": "롬데이즈",
+  "description": "아빠·엄마·로미의 가족 캘린더, 가계부, 자산",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fff3f7",
+  "theme_color": "#ff6b9f",
+  "icons": [
+    { "src": "/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

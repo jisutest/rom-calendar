@@ -21,6 +21,13 @@ http.createServer(async (req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     return res.end(await readFile(new URL("./index.html", import.meta.url)));
   }
+  // 홈 화면 앱(PWA) 파일
+  const pwa = { "/sw.js": "text/javascript; charset=utf-8", "/manifest.webmanifest": "application/manifest+json" }[path];
+  if (pwa) {
+    res.setHeader("Content-Type", pwa);
+    res.setHeader("Cache-Control", "no-cache");
+    return res.end(await readFile(new URL(`.${path}`, import.meta.url)));
+  }
   const file = path.match(/^\/(fonts|img)\/([\w.-]+\.(ttf|woff2?|png))$/);
   if (file) {
     try {

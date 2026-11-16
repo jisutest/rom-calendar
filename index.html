@@ -3,10 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ff6b9f">
+<meta name="theme-color" content="#ff6b9f" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#c9497c" media="(prefers-color-scheme: dark)">
 <title>롬데이즈</title>
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/png" href="/img/favicon.png">
 <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<!-- 홈 화면 앱: 주소창 없이 전체 화면, 상태 표시줄까지 핑크 헤더가 이어진다 -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="롬데이즈">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -112,6 +118,10 @@ header.top {
 .iconbtn:active { transform: translateY(1px); box-shadow: none; }
 .textbtn { height: 40px; padding: 0 18px; border-radius: 999px; border: 2px solid #fff; background: transparent; color: #fff; font-family: var(--f-display); font-size: 16px; transition: background .12s; }
 .textbtn:hover { background: rgba(255,255,255,.2); }
+.installbtn { height: 30px; padding: 0 12px; border-radius: 999px; border: 0; background: #fff; color: var(--pink); font-family: var(--f-display); font-size: 14px; box-shadow: 0 2px 0 rgba(180, 30, 90, .2); }
+.installbtn:hover { transform: translateY(-1px); }
+.install-steps { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 8px; line-height: 1.6; }
+.install-steps .k { display: inline-block; padding: 0 8px; border-radius: 8px; background: var(--pink-soft); color: var(--pink); font-weight: 700; }
 
 .filters { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 16px; align-items: center; }
 .chip { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 15px 0 11px; border-radius: 999px; border: 2px solid transparent; background: rgba(255,255,255,.35); color: #fff; font-weight: 700; font-size: 13px; transition: transform .12s, background .12s; }
@@ -508,6 +518,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         롬데이즈
         <span class="sub">로미네 가족</span>
       </h1>
+      <button class="installbtn" id="installBtn" hidden>📲 앱으로 설치</button>
       <div class="monthnav">
         <button class="iconbtn" id="prev" aria-label="이전 달">‹</button>
         <button class="textbtn" id="todayBtn">오늘</button>
@@ -2300,6 +2311,35 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
   // 다른 가족이 바꾼 내용을 가져오기: 화면이 보일 때 30초마다, 그리고 다시 돌아왔을 때
   setInterval(() => { if (document.visibilityState === "visible") refresh(); }, 30000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
+
+  // ---------- 홈 화면 앱 (PWA) ----------
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
+  // 이미 앱으로 열었으면 설치 버튼을 숨긴다. 안드로이드(크롬)는 설치 창을, 아이폰(사파리)은 방법 안내를 띄운다.
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const installBtn = $("installBtn");
+  let installEvt = null;
+  if (!standalone && isIOS) installBtn.hidden = false;
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; if (!standalone) installBtn.hidden = false; });
+  addEventListener("appinstalled", () => { installBtn.hidden = true; installEvt = null; });
+  installBtn.addEventListener("click", async () => {
+    if (installEvt) { installEvt.prompt(); const { outcome } = await installEvt.userChoice; if (outcome === "accepted") installBtn.hidden = true; installEvt = null; return; }
+    const { body, close } = openSheet("홈 화면에 롬데이즈 추가하기", true); // 비밀번호 창 위에 겹쳐 띄운다
+    body.append(el("div", { class: "form help" },
+      isIOS ? el("ol", { class: "install-steps" },
+        el("li", {}, el("b", {}, "사파리"), "로 이 페이지를 열어요. (카카오톡·네이버 앱 안에서 열었다면 ‘사파리로 열기’)"),
+        el("li", {}, "아래(아이패드는 위)의 ", el("span", { class: "k" }, "공유 ⬆"), " 버튼을 눌러요."),
+        el("li", {}, el("span", { class: "k" }, "홈 화면에 추가"), "를 고르고 ‘추가’를 눌러요."),
+        el("li", {}, "홈 화면에 생긴 ", el("b", {}, "로미 얼굴 아이콘"), "으로 열면 앱처럼 전체 화면으로 떠요.")) :
+      el("ol", { class: "install-steps" },
+        el("li", {}, el("b", {}, "크롬"), "으로 이 페이지를 열어요."),
+        el("li", {}, "오른쪽 위 ", el("span", { class: "k" }, "⋮"), " 메뉴를 눌러요."),
+        el("li", {}, el("span", { class: "k" }, "앱 설치"), " 또는 ", el("span", { class: "k" }, "홈 화면에 추가"), "를 눌러요.")),
+      el("p", { class: "fx-sub" }, "가족 비밀번호는 앱에서 한 번 더 넣어야 할 수 있어요."),
+      el("div", { class: "actions" }, el("span", { class: "spacer" }), el("button", { type: "button", class: "btn primary", onclick: close }, "알겠어요"))));
+  });
 })();
 </script>
 </body>
