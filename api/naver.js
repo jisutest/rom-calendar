@@ -58,7 +58,12 @@ async function loadAll() {
       out.picked = chosen.map(c => c.name);
       if (!wanted.length) out.needPick = true;
       else if (!chosen.length) out.error = `NAVER_CALENDARS에 적은 캘린더(${wanted.join(", ")})를 찾지 못했어요. 아래 목록의 이름과 똑같이 적어 주세요.`;
-      for (const c of chosen) for (const ics of await davEvents(c.url, id, pw, win)) blocks.push({ cal: c.name, ics });
+      out.diag = [];
+      for (const c of chosen) {
+        const { ics, diag } = await davEvents(c.url, id, pw, win);
+        out.diag.push({ cal: c.name, steps: diag.steps });
+        for (const x of ics) blocks.push({ cal: c.name, ics: x });
+      }
     } else {
       for (const u of icsUrls) {
         const r = await fetch(u.replace(/^webcal:/i, "https:"), { signal: AbortSignal.timeout(10000) });
@@ -79,7 +84,8 @@ async function loadAll() {
 
   // 같은 UID를 한 번에 펼치기 위해 모든 블록의 VEVENT를 모은다
   const byUid = new Map();
-  for (const b of blocks) for (const ev of parseIcs(b.ics)) {
+  const stat = { vevents: 0, noDate: 0, samples: [] };
+  for (const b of blocks) for (const ev of parseIcs(b.ics, stat)) {
     ev.cal = b.cal;
     const k = b.cal + "\u0001" + ev.uid;
     if (!byUid.has(k)) byUid.set(k, []);
@@ -100,6 +106,7 @@ async function loadAll() {
     : events;
   kept.sort((a, b) => a.start.localeCompare(b.start) || (a.time || "").localeCompare(b.time || ""));
   out.events = kept.slice(0, MAX_EVENTS);
+  out.stat = { blocks: blocks.length, vevents: stat.vevents, noDate: stat.noDate, samples: stat.samples, inWindow: events.length, kept: kept.length };
   return out;
 }
 
@@ -160,8 +167,61 @@ async function davEvents(url, user, pw, win) {
   const body = `<?xml version="1.0" encoding="utf-8"?><c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">`
     + `<d:prop><c:calendar-data/></d:prop><c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VEVENT">`
     + `<c:time-range start="${z(win.from)}" end="${z(win.to)}"/></c:comp-filter></c:comp-filter></c:filter></c:calendar-query>`;
-  const r = await dav("REPORT", url, user, pw, 1, body);
-  return tags(r.xml, "calendar-data").map(xmlText).filter(s => s.includes("BEGIN:VEVENT"));
+  const diag = { steps: [] };
+  const read = xml => {
+    const resps = tags(xml, "response");
+    const hrefs = [], ics = [];
+    for (const resp of resps) {
+      const href = xmlText(tag(resp, "href") || "").trim();
+      const data = xmlText(tag(resp, "calendar-data") || "");
+      if (data.includes("BEGIN:VEVENT")) ics.push(data);
+      else if (href && !/\/$/.test(href)) hrefs.push(href);
+    }
+    return { n: resps.length, hrefs, ics };
+  };
+  const step = (name, x, extra) => diag.steps.push(`${name}: 응답 ${x.n}개 · 일정 데이터 ${x.ics.length}개` + (extra || ""));
+
+  // 1) 기간을 정해서 일정 데이터 요청
+  let got = { n: 0, hrefs: [], ics: [] };
+  try { got = read((await dav("REPORT", url, user, pw, 1, body)).xml); step("기간 조회", got); }
+  catch (e) { if (e.http === 401 || e.http === 403) throw e; diag.steps.push(`기간 조회: 실패(${e.http || e.message})`); }
+
+  // 2) 아무것도 없으면 기간 조건 없이 다시
+  if (!got.ics.length && !got.hrefs.length) {
+    const all = body.replace(/<c:time-range[^>]*\/>/, "");
+    try { got = read((await dav("REPORT", url, user, pw, 1, all)).xml); step("전체 조회", got); }
+    catch (e) { if (e.http === 401 || e.http === 403) throw e; diag.steps.push(`전체 조회: 실패(${e.http || e.message})`); }
+  }
+  // 3) 주소만 오고 내용이 없으면 주소로 한꺼번에(multiget), 그래도 없으면 하나씩 받기
+  if (!got.ics.length && !got.hrefs.length) {
+    try {
+      const r = await dav("PROPFIND", url, user, pw, 1, PROP("<d:getetag/><d:getcontenttype/>"));
+      const x = read(r.xml);
+      got.hrefs = x.hrefs; step("목록 조회", x, ` · 파일 ${x.hrefs.length}개`);
+    } catch (e) { if (e.http === 401 || e.http === 403) throw e; diag.steps.push(`목록 조회: 실패(${e.http || e.message})`); }
+  }
+  if (!got.ics.length && got.hrefs.length) {
+    const hrefs = got.hrefs.slice(0, 500);
+    for (let i = 0; i < hrefs.length; i += 100) {
+      const mg = `<?xml version="1.0" encoding="utf-8"?><c:calendar-multiget xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:prop><c:calendar-data/></d:prop>`
+        + hrefs.slice(i, i + 100).map(h => `<d:href>${h.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</d:href>`).join("") + `</c:calendar-multiget>`;
+      try { const x = read((await dav("REPORT", url, user, pw, 1, mg)).xml); got.ics.push(...x.ics); step("묶음 받기", x); }
+      catch (e) { if (e.http === 401 || e.http === 403) throw e; diag.steps.push(`묶음 받기: 실패(${e.http || e.message})`); break; }
+    }
+    if (!got.ics.length) {
+      let ok = 0;
+      for (const h of hrefs.slice(0, 200)) {
+        try {
+          const r = await fetch(new URL(h, url).href, { headers: { Authorization: "Basic " + Buffer.from(`${user}:${pw}`).toString("base64") }, signal: AbortSignal.timeout(8000) });
+          const t = r.ok ? await r.text() : "";
+          if (t.includes("BEGIN:VEVENT")) { got.ics.push(t); ok++; }
+        } catch {}
+      }
+      diag.steps.push(`하나씩 받기: ${ok}개`);
+    }
+  }
+  diag.ics = got.ics.length;
+  return { ics: got.ics, diag };
 }
 
 // ---------------- iCalendar 읽기 ----------------
@@ -170,20 +230,21 @@ const unescText = s => String(s).replace(/\\n/gi, "\n").replace(/\\([,;\\])/g, "
 // 날짜 값 → 한국 시간 기준 '벽시계' ms (UTC 필드에 담음)
 function parseDate(value, params) {
   const v = String(value || "").trim();
-  let m = v.match(/^(\d{4})(\d{2})(\d{2})$/);
-  if (m || params.VALUE === "DATE") {
-    m = m || v.match(/^(\d{4})(\d{2})(\d{2})/);
+  let m = v.match(/^(\d{4})-?(\d{2})-?(\d{2})$/);
+  if (m || String(params.VALUE || "").toUpperCase() === "DATE") {
+    m = m || v.match(/^(\d{4})-?(\d{2})-?(\d{2})/);
     if (!m) return null;
     return { ms: Date.UTC(+m[1], +m[2] - 1, +m[3]), allDay: true, date: `${m[1]}-${m[2]}-${m[3]}` };
   }
-  m = v.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z?)$/);
+  // 보통은 20261117T100000(Z), 가끔 초가 없거나 - : 가 섞인 형태도 받아 준다
+  m = v.match(/^(\d{4})-?(\d{2})-?(\d{2})T(\d{2}):?(\d{2})(?::?(\d{2}))?(?:\.\d+)?(Z?)$/i);
   if (!m) return null;
-  let ms = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
-  if (m[7] === "Z") ms += KST; // UTC → 한국 시간 (TZID가 있으면 그 지역 시간 그대로 둔다)
+  let ms = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+  if (m[7]) ms += KST; // UTC → 한국 시간 (TZID가 있으면 그 지역 시간 그대로 둔다)
   return { ms, allDay: false, date: ymd(ms) };
 }
 
-function parseIcs(text) {
+function parseIcs(text, stat) {
   const lines = String(text).replace(/\r?\n[ \t]/g, "").split(/\r?\n/);
   const out = [];
   const stack = [];
@@ -208,7 +269,11 @@ function parseIcs(text) {
     }
     if (name === "END") {
       const top = stack.pop();
-      if (top === "VEVENT" && cur) { if (cur.start && !cur.cancelled) out.push(cur); cur = null; }
+      if (top === "VEVENT" && cur) {
+        if (stat) { stat.vevents++; if (!cur.start) { stat.noDate++; if (stat.samples.length < 3) stat.samples.push(cur.rawStart || "(DTSTART 없음)"); } }
+        if (cur.start && !cur.cancelled) out.push(cur);
+        cur = null;
+      }
       continue;
     }
     if (!cur || stack[stack.length - 1] !== "VEVENT") continue;
@@ -217,7 +282,7 @@ function parseIcs(text) {
       case "SUMMARY": cur.title = unescText(value).trim().slice(0, 80); break;
       case "DESCRIPTION": cur.memo = unescText(value).trim().slice(0, 500); break;
       case "LOCATION": cur.loc = unescText(value).trim().slice(0, 100); break;
-      case "DTSTART": cur.start = parseDate(value, params); break;
+      case "DTSTART": cur.start = parseDate(value, params); cur.rawStart = (head + ":" + value).slice(0, 80); break;
       case "DTEND": cur.end = parseDate(value, params); break;
       case "DURATION": cur.dur = parseDuration(value); break;
       case "RRULE": cur.rrule = value; break;

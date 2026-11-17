@@ -349,6 +349,8 @@ aside.day { background: var(--surface); border-radius: 28px; padding: 22px 20px;
 .nv-cals span { padding: 3px 10px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--line); font-size: 12.5px; }
 .nv-cals span.on { border-color: var(--nv); font-weight: 700; }
 .help code { padding: 1px 6px; border-radius: 6px; background: var(--surface-2); font-size: 12.5px; word-break: break-all; }
+.nv-diag { margin-top: 8px; font-size: 12px; color: var(--muted); line-height: 1.55; word-break: break-all; }
+.nv-diag summary { cursor: pointer; font-weight: 700; }
 .nv-detail { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; line-height: 1.55; }
 .nv-detail dt { color: var(--muted); font-weight: 700; }
 .nv-detail dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
@@ -2346,7 +2348,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
           : el("div", {}, el("b", {}, `일정 ${state.naver.length}개`), "를 보여 주고 있어요", at ? ` · ${pad(at.getHours())}:${pad(at.getMinutes())} 기준` : ""),
         info.keyword ? el("div", {}, "제목에 ", el("code", {}, info.keyword), " 가 들어간 일정만 보여요.") : null,
         info.calendars && info.calendars.length ? el("div", {}, info.mode === "caldav" ? "내 네이버 캘린더 (초록 테두리 = 보여 주는 중):" : "구독 중인 캘린더:",
-          el("div", { class: "nv-cals" }, info.calendars.map(n => el("span", { class: (info.picked || []).includes(n) ? "on" : "" }, n)))) : null);
+          el("div", { class: "nv-cals" }, info.calendars.map(n => el("span", { class: (info.picked || []).includes(n) ? "on" : "" }, n)))) : null,
+        // 일정이 안 보일 때 원인을 찾기 위한 정보 (일정 내용은 담지 않음)
+        info.stat || info.diag ? el("details", { class: "nv-diag", open: !state.naver.length },
+          el("summary", {}, "진단 정보 (일정이 안 보이면 이걸 캡처해 주세요)"),
+          (info.diag || []).map(d => el("div", {}, el("b", {}, d.cal), " — ", d.steps.join(" → "))),
+          info.stat ? el("div", {}, `받은 데이터 ${info.stat.blocks}개 · 일정 ${info.stat.vevents}개(날짜 못 읽음 ${info.stat.noDate}) · 기간 안 ${info.stat.inWindow}개 · 표시 ${info.stat.kept}개`) : null,
+          info.stat && info.stat.samples && info.stat.samples.length ? el("div", {}, "못 읽은 날짜 예: ", info.stat.samples.join(" / ")) : null) : null);
     };
     const refreshBtn = el("button", { type: "button", class: "btn", onclick: async () => {
       refreshBtn.disabled = true; refreshBtn.textContent = "받아 오는 중…";
