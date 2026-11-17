@@ -39,6 +39,7 @@
   --mom: #ff4f8b;  --mom-soft: #ffe2ed;
   --romi: #ff9a5a; --romi-soft: #fff0e4;
   --fam: #b06cf0;  --fam-soft: #f4e8ff;
+  --nv: #03b85a;   --nv-soft: #e2f7ea;
   --red: #e8343f;
   --jp-ink: #ffffff;
   --sat: #6f86ff;
@@ -64,7 +65,7 @@
     --bg: #1f1219; --surface: #2a1822; --surface-2: #321d29; --line: #47283a;
     --fg: #ffe9f1; --muted: #c995ac; --pink: #ff76a8; --pink-2: #ff9cc2; --pink-3: #7a3556; --pink-soft: #46213a; --pink-ink: #2a0d1b;
     --dad: #98a8ff; --dad-soft: #262c52; --mom: #ff7fab; --mom-soft: #4b2236;
-    --romi: #ffb07f; --romi-soft: #4a2c1d; --fam: #cb98ff; --fam-soft: #3a2550;
+    --romi: #ffb07f; --romi-soft: #4a2c1d; --fam: #cb98ff; --fam-soft: #3a2550; --nv: #4fd98b; --nv-soft: #183a28;
     --red: #ff5a63; --jp-ink: #ffffff; --sat: #98a8ff; --head: #c9497c; --bar-ink: #2a0d1b;
     --fixed: #e64980; --fixed-soft: #4a1f30; --var: #8174f0; --var-soft: #2c2752; --var-ink: #b9b0ff;
     --cat-s: 30%; --cat-l: 21%; --cat-l-hover: 25%; --cat-bar-s: 55%; --cat-bar-l: 62%;
@@ -77,7 +78,7 @@
   --bg: #1f1219; --surface: #2a1822; --surface-2: #321d29; --line: #47283a;
   --fg: #ffe9f1; --muted: #c995ac; --pink: #ff76a8; --pink-2: #ff9cc2; --pink-3: #7a3556; --pink-soft: #46213a; --pink-ink: #2a0d1b;
   --dad: #98a8ff; --dad-soft: #262c52; --mom: #ff7fab; --mom-soft: #4b2236;
-  --romi: #ffb07f; --romi-soft: #4a2c1d; --fam: #cb98ff; --fam-soft: #3a2550;
+  --romi: #ffb07f; --romi-soft: #4a2c1d; --fam: #cb98ff; --fam-soft: #3a2550; --nv: #4fd98b; --nv-soft: #183a28;
   --red: #ff5a63; --jp-ink: #ffffff; --sat: #98a8ff; --head: #c9497c; --bar-ink: #2a0d1b;
     --fixed: #e64980; --fixed-soft: #4a1f30; --var: #8174f0; --var-soft: #2c2752; --var-ink: #b9b0ff;
     --cat-s: 30%; --cat-l: 21%; --cat-l-hover: 25%; --cat-bar-s: 55%; --cat-bar-l: 62%;
@@ -339,6 +340,18 @@ aside.day { background: var(--surface); border-radius: 28px; padding: 22px 20px;
 .addday { margin-top: 14px; width: 100%; height: 46px; border-radius: 999px; border: 0; background: var(--pink-soft); color: var(--pink); font-family: var(--f-display); font-size: 16px; transition: background .12s, color .12s; }
 .addday:hover { background: var(--pink); color: var(--pink-ink); }
 .legend-note { font-size: 11.5px; color: var(--muted); margin-top: 12px; text-align: center; }
+.nvlink { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 10px auto 0; padding: 6px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg); font-size: 12.5px; font-weight: 700; }
+.nvlink:hover { border-color: var(--nv); }
+.nvlink .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--nv); }
+.nv-state { padding: 12px 14px; border-radius: 14px; background: var(--nv-soft); line-height: 1.6; font-size: 13.5px; }
+.nv-state.warn { background: var(--pink-soft); }
+.nv-cals { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.nv-cals span { padding: 3px 10px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--line); font-size: 12.5px; }
+.nv-cals span.on { border-color: var(--nv); font-weight: 700; }
+.help code { padding: 1px 6px; border-radius: 6px; background: var(--surface-2); font-size: 12.5px; word-break: break-all; }
+.nv-detail { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; line-height: 1.55; }
+.nv-detail dt { color: var(--muted); font-weight: 700; }
+.nv-detail dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
 .logout { display: block; margin: 6px auto 0; border: 0; background: none; color: var(--muted); font-size: 11.5px; text-decoration: underline; }
 .login-lead { margin: 0; font-family: var(--f-cute); font-size: 15px; }
 input[type=password] { width: 100%; min-width: 0; height: 44px; padding: 0 14px; border-radius: 16px; border: 2px solid var(--line); background: var(--surface-2); }
@@ -647,8 +660,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     month: now.getMonth() + 1,   // 왼쪽(첫 번째) 달
     sel: TODAY,
     show: load("rom.show", { dad: true, mom: true, romi: true }),
-    hol: load("rom.hol", { kr: true, jp: true }),
+    hol: { nv: true, ...load("rom.hol", { kr: true, jp: true }) },
     events: [],
+    naver: [],          // 네이버 캘린더 일정 (보기 전용, 서버에서 날짜별로 펼친 것)
+    nvInfo: null,       // 네이버 연동 상태 (/api/naver)
     fixed: [],          // 고정비
     expenses: [],       // 변동 지출
     assets: [],         // 자산
@@ -674,11 +689,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
 
   const colorOf = who => { const w = (who || []).filter(x => P[x]); return w.length === 1 ? P[w[0]] : FAMILY; };
   const whoLabel = who => { const w = (who || []).filter(x => P[x]); return w.length === PEOPLE.length ? "가족 모두" : w.map(x => P[x].name).join("·"); };
-  const visible = ev => (ev.who || []).some(w => state.show[w]);
+  const visible = ev => ev.naver ? !!state.hol.nv : (ev.who || []).some(w => state.show[w]);
+  // 네이버 캘린더에서 가져온 일정(보기 전용)은 초록색
+  const NAVER = { c: "var(--nv)", cs: "var(--nv-soft)" };
+  const evColor = ev => ev.naver ? NAVER : colorOf(ev.who);
+  const allEvents = () => state.naver.length ? state.events.concat(state.naver) : state.events;
 
   function occurrencesIn(a, b) {
     const map = new Map();
-    for (const ev of state.events) {
+    for (const ev of allEvents()) {
       if (!visible(ev)) continue;
       const dur = Math.max(0, idx(ev.end || ev.start) - idx(ev.start));
       for (const o of expand(ev, a, b)) {
@@ -712,13 +731,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
       el("span", { class: "sep", "aria-hidden": "true" }),
       el("button", { class: "chip", "aria-pressed": String(!!state.hol.kr), style: "--c:var(--red)", onclick: toggle(state.hol, "kr", "rom.hol") }, el("span", { class: "dot" }), "한국 공휴일"),
       el("button", { class: "chip", "aria-pressed": String(!!state.hol.jp), style: "--c:var(--red)", onclick: toggle(state.hol, "jp", "rom.hol") }, el("span", { class: "dot" }), "일본 공휴일"),
+      state.nvInfo && state.nvInfo.configured
+        ? el("button", { class: "chip", "aria-pressed": String(!!state.hol.nv), style: "--c:var(--nv)", onclick: toggle(state.hol, "nv", "rom.hol") }, el("span", { class: "dot" }), "네이버")
+        : null,
     );
   }
 
   // [a, b]에 걸치는 일정 발생(시작~끝 일 번호) 목록
   function spansIn(a, b) {
     const out = [];
-    for (const ev of state.events) {
+    for (const ev of allEvents()) {
       if (!visible(ev)) continue;
       const dur = Math.max(0, idx(ev.end || ev.start) - idx(ev.start));
       for (const o of expand(ev, a, b)) out.push({ ev, s: o, e: o + dur });
@@ -754,7 +776,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         if (lane < 0) { lane = laneEnd.length; laneEnd.push(g.ce); } else laneEnd[lane] = g.ce;
         if (lane >= ROWS) { for (let d = g.cs; d <= g.ce; d++) hidden[d - ws]++; continue; }
         for (let d = g.cs; d <= g.ce; d++) used[d - ws].add(lane);
-        const c = colorOf(g.ev.who);
+        const c = evColor(g.ev);
         const contL = g.cs > g.s, contR = g.ce < g.e;
         kids.push(el("div", {
           class: "bar" + (contL ? " cont-l" : "") + (contR ? " cont-r" : ""),
@@ -781,12 +803,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         kids.push(el("div", { class: hcls, style: `grid-column:${i + 1}`, "aria-hidden": "true" },
           el("span", { class: "num" }, String(date.getUTCDate())),
           hols.map(h => el("span", { class: `hol ${h.c}`, title: h.n }, h.n)),
-          singles.length ? el("span", { class: "dots" }, singles.slice(0, 4).map(({ ev }) => el("i", { style: `--c:${colorOf(ev.who).c}` }))) : null));
+          singles.length ? el("span", { class: "dots" }, singles.slice(0, 4).map(({ ev }) => el("i", { style: `--c:${evColor(ev).c}` }))) : null));
         let r = 0;
         for (const { ev } of singles) {
           while (r < ROWS && used[i].has(r)) r++;
           if (r >= ROWS) { hidden[i]++; continue; }
-          const c = colorOf(ev.who);
+          const c = evColor(ev);
           kids.push(el("div", { class: "ev", style: `--c:${c.c};--cs:${c.cs};grid-row:${r + 2};grid-column:${i + 1}`, title: ev.title, "aria-hidden": "true" },
             el("span", {}, (ev.time ? ev.time + " " : "") + ev.title)));
           r++;
@@ -819,13 +841,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     let body;
     if (!state.loaded && !list.length) body = el("div", { class: "empty" }, "가족 일정을 불러오는 중이에요…");
     else if (list.length) body = el("ul", { class: "agenda" }, list.map(({ ev, occ, multi, dayN, dayT }) => {
-      const c = colorOf(ev.who);
-      return el("li", {}, el("button", { class: "item", style: `--c:${c.c};--cs:${c.cs}`, onclick: () => openEditor(ev, occ) },
+      const c = evColor(ev);
+      return el("li", {}, el("button", { class: "item", style: `--c:${c.c};--cs:${c.cs}`, onclick: () => ev.naver ? openNaverEvent(ev) : openEditor(ev, occ) },
         el("span", { class: "t" }, multi ? `${dayN}/${dayT}일` : (ev.time || "종일")),
         el("span", {},
           el("div", { class: "ti" }, ev.title),
           el("div", { class: "meta" },
-            el("span", { class: "tag" }, whoLabel(ev.who)),
+            el("span", { class: "tag" }, ev.naver ? `네이버 · ${ev.cal}` : whoLabel(ev.who)),
             ev.repeat && ev.repeat !== "none" ? el("span", { class: "tag plain" }, REPEAT_LABEL[ev.repeat]) : null),
           ev.memo ? el("div", { class: "memo" }, ev.memo) : null)));
     }));
@@ -840,6 +862,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
       state.canWrite ? el("button", { class: "addday", onclick: () => openEditor(null, k) }, `+ ${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일에 일정 추가`) : null,
       state.canWrite ? daySpendSection(k) : null,
       el("div", { class: "legend-note" }, "공휴일은 2025–2027년만 표시돼요"),
+      state.canWrite ? el("button", { class: "nvlink", onclick: openNaverInfo },
+        el("span", { class: "dot" }), state.nvInfo && state.nvInfo.configured
+          ? (state.nvInfo.error || state.nvInfo.needPick ? "네이버 캘린더 연동 · 확인 필요" : `네이버 캘린더 연동 중 · ${state.naver.length}개`)
+          : "네이버 캘린더 연동하기") : null,
       state.canWrite ? el("button", { class: "logout", onclick: logout }, "이 기기에서 로그아웃") : null,
     ].filter(Boolean));
   }
@@ -2257,6 +2283,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
         state.loaded = true; state.canWrite = true;
         const t = new Date();
         if (state.storage === "missing" || state.storage === "error") { setStatus("⚠ 저장소(DB)가 연결되지 않았어요. 지금은 저장이 안 돼요. Vercel의 Storage에서 Upstash를 rom-calendar에 연결하고 다시 배포해 주세요.", true); renderAll(); return; }
+        loadNaver();
         setStatus(`가족 일정 ${state.events.length}개 · 고정비 ${state.fixed.length}개 · 지출 ${state.expenses.length}건 · ${pad(t.getHours())}:${pad(t.getMinutes())} 기준 · 가족이 바꾼 내용은 잠시 뒤 자동으로 보여요`);
         renderAll();
       } catch (e) {
@@ -2267,8 +2294,86 @@ input:focus, select:focus, textarea:focus { border-color: var(--pink); outline: 
     return refreshing;
   }
 
+  // ---------- 네이버 캘린더 (보기 전용, /api/naver) ----------
+  // 30초마다 하는 가족 일정 새로고침과 달리, 네이버는 5분에 한 번만 받아 온다.
+  let nvAt = 0, nvBusy = null;
+  function loadNaver(force) {
+    if (!familyKey) return Promise.resolve();
+    if (nvBusy) return nvBusy;
+    if (!force && Date.now() - nvAt < 5 * 60000) return Promise.resolve();
+    nvAt = Date.now();
+    nvBusy = api("GET", null, null, "/api/naver" + (force ? "?fresh=1" : "")).then(j => {
+      state.nvInfo = j;
+      state.naver = (j.events || []).filter(e => DATE_RE.test(e.start) && DATE_RE.test(e.end)).map(e => ({
+        id: "nv:" + e.id, title: String(e.title || "(제목 없음)"), who: [], start: e.start, end: e.end < e.start ? e.start : e.end,
+        time: String(e.time || ""), endTime: String(e.endTime || ""), repeat: "none", until: "", exdates: [],
+        memo: String(e.memo || ""), loc: String(e.loc || ""), cal: String(e.cal || "네이버"), naver: true,
+      }));
+      renderAll();
+    }).catch(e => {
+      if (e.status === 404) state.nvInfo = { configured: false }; // 아직 배포 전
+      else state.nvInfo = { ...(state.nvInfo || {}), configured: true, error: e.message || "네이버 일정을 받아오지 못했어요." };
+      renderAll();
+    }).finally(() => { nvBusy = null; });
+    return nvBusy;
+  }
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+  function openNaverEvent(ev) {
+    const { body, close } = openSheet(ev.title);
+    const fmt = k => { const d = new Date(idx(k) * DAY); return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 (${WD[dow(idx(k))]})`; };
+    const when = (ev.start === ev.end ? fmt(ev.start) : `${fmt(ev.start)} ~ ${fmt(ev.end)}`)
+      + (ev.time ? ` ${ev.time}${ev.endTime ? "–" + ev.endTime : ""}` : " 하루 종일");
+    body.append(el("div", { class: "form" },
+      el("dl", { class: "nv-detail" },
+        el("dt", {}, "언제"), el("dd", {}, when),
+        el("dt", {}, "캘린더"), el("dd", {}, `네이버 · ${ev.cal}`),
+        ev.loc ? [el("dt", {}, "장소"), el("dd", {}, ev.loc)] : null,
+        ev.memo ? [el("dt", {}, "메모"), el("dd", {}, ev.memo)] : null),
+      el("p", { class: "login-lead" }, "네이버 캘린더에서 가져온 일정이라 여기서는 고칠 수 없어요. 고치려면 네이버 캘린더 앱에서 바꿔 주세요. 몇 분 뒤 여기에도 반영돼요."),
+      el("div", { class: "actions" }, el("span", { class: "spacer" }), el("button", { type: "button", class: "btn primary", onclick: close }, "닫기"))));
+  }
+
+  function openNaverInfo() {
+    const { body, close } = openSheet("네이버 캘린더 연동");
+    const info = state.nvInfo || { configured: false };
+    const stateBox = () => {
+      if (!info.configured) return el("div", { class: "nv-state warn" }, "아직 연결되지 않았어요. 아래 순서대로 Vercel에 설정을 넣으면 돼요.");
+      const at = info.fetchedAt ? new Date(info.fetchedAt) : null;
+      return el("div", { class: "nv-state" + (info.error || info.needPick ? " warn" : "") },
+        info.error ? el("div", {}, "⚠ ", info.error)
+          : info.needPick ? el("div", {}, "네이버에 연결됐어요! 이제 보여 줄 캘린더를 골라 ", el("code", {}, "NAVER_CALENDARS"), "에 이름을 적어 주세요.")
+          : el("div", {}, el("b", {}, `일정 ${state.naver.length}개`), "를 보여 주고 있어요", at ? ` · ${pad(at.getHours())}:${pad(at.getMinutes())} 기준` : ""),
+        info.keyword ? el("div", {}, "제목에 ", el("code", {}, info.keyword), " 가 들어간 일정만 보여요.") : null,
+        info.calendars && info.calendars.length ? el("div", {}, info.mode === "caldav" ? "내 네이버 캘린더 (초록 테두리 = 보여 주는 중):" : "구독 중인 캘린더:",
+          el("div", { class: "nv-cals" }, info.calendars.map(n => el("span", { class: (info.picked || []).includes(n) ? "on" : "" }, n)))) : null);
+    };
+    const refreshBtn = el("button", { type: "button", class: "btn", onclick: async () => {
+      refreshBtn.disabled = true; refreshBtn.textContent = "받아 오는 중…";
+      await loadNaver(true); close(); openNaverInfo();
+    } }, "지금 다시 받아 오기");
+    body.append(el("div", { class: "form help" },
+      stateBox(),
+      el("p", {}, "네이버 캘린더에서 ", el("b", {}, "고른 캘린더의 일정만"), " 초록색으로 보여 줘요. 여기서는 보기만 하고, 네이버 쪽 일정은 바꾸지 않아요."),
+      el("ol", { class: "help-steps" },
+        el("li", {}, "네이버 캘린더에서 롬데이즈에 보여 줄 일정만 모을 ", el("b", {}, "캘린더를 따로 하나"), " 만들어요. (예: 로미네 가족)"),
+        el("li", {}, "네이버 → 내정보 → 보안설정 → 2단계 인증 → ", el("b", {}, "애플리케이션 비밀번호"), "에서 비밀번호를 하나 만들어요. (네이버 로그인 비밀번호가 아니에요)"),
+        el("li", {}, "Vercel → rom-calendar → Settings → Environment Variables에 넣어요:",
+          el("div", {}, el("code", {}, "NAVER_ID"), " 네이버 아이디 (@naver.com 앞부분)"),
+          el("div", {}, el("code", {}, "NAVER_APP_PASSWORD"), " 2번에서 만든 비밀번호"),
+          el("div", {}, el("code", {}, "NAVER_CALENDARS"), " 보여 줄 캘린더 이름 (여러 개면 쉼표로)")),
+        el("li", {}, "Vercel에서 다시 배포(Redeploy)한 뒤, 여기서 ", el("b", {}, "‘지금 다시 받아 오기’"), "를 눌러요.")),
+      el("ul", { class: "help-tips" },
+        el("li", {}, "캘린더 이름을 모르겠으면 3번에서 ", el("code", {}, "NAVER_CALENDARS"), "만 비워 두고 배포하세요. 여기에 내 캘린더 목록이 떠요."),
+        el("li", {}, "한 캘린더 안에서 일부만 보이게 하려면 ", el("code", {}, "NAVER_KEYWORD"), "에 ", el("code", {}, "[롬]"), "처럼 적고, 네이버 일정 제목에 그 글자를 붙여요."),
+        el("li", {}, "구독(.ics) 주소가 있다면 1~3번 대신 ", el("code", {}, "NAVER_ICS_URL"), "에 그 주소를 넣어도 돼요."),
+        el("li", {}, "비밀번호는 Vercel에만 넣고, 채팅이나 코드에는 적지 마세요. 위쪽 ‘네이버’ 버튼으로 켜고 끌 수 있어요.")),
+      el("div", { class: "actions" }, refreshBtn, el("span", { class: "spacer" }), el("button", { type: "button", class: "btn primary", onclick: close }, "닫기"))));
+  }
+
   function logout() {
     familyKey = ""; save(KEY_STORE, "");
+    state.naver = []; state.nvInfo = null; nvAt = 0;
     state.events = []; state.fixed = []; state.expenses = []; state.assets = []; state.canWrite = false; state.loaded = false;
     renderAll(); showLogin();
   }
