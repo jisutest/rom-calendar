@@ -2,7 +2,7 @@
 // - 화면(index.html): 인터넷이 되면 항상 새로 받고(최신 유지), 안 되면 저장해 둔 것을 보여 준다.
 // - 글꼴·그림: 한 번 받으면 저장해 두고 쓴다.
 // - /api (가족 일정·가계부·자산): 개인 정보라 절대 저장하지 않는다.
-const VERSION = "romdays-v1";
+const VERSION = "romdays-v2";
 const SHELL = ["/", "/manifest.webmanifest", "/img/romi-face.png", "/img/icon-192.png", "/img/favicon.png"];
 
 self.addEventListener("install", e => {
